@@ -32,7 +32,7 @@ pub struct ArticlePostData {
 }
 
 #[post("/articles")]
-pub async fn post(
+pub async fn create_article(
     pool: web::Data<db::DbPool>,
     article: web::Json<ArticlePostData>,
 ) -> Result<HttpResponse, Error> {
@@ -62,7 +62,9 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_post() {
-        let mut app = test::init_service(App::new().service(post)).await;
+        let pool = db::create_connection_pool();
+        let mut app =
+            test::init_service(App::new().data(pool.clone()).service(create_article)).await;
         let data = ArticlePostData {
             full_title: "AA".to_string(),
             wikitext: "==AA==\nasdf".to_string(),
@@ -77,8 +79,10 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_get_by_full_title_non_existing() {
-        let mut app = test::init_service(App::new().service(get_by_full_title)).await;
-        let req = test::TestRequest::post()
+        let pool = db::create_connection_pool();
+        let mut app =
+            test::init_service(App::new().data(pool.clone()).service(get_by_full_title)).await;
+        let req = test::TestRequest::get()
             .uri("/articles/non-existing")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
@@ -86,19 +90,15 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_get_by_full_title_existing() {
-        let mut app = test::init_service(App::new().service(get_by_full_title)).await;
-        let req = test::TestRequest::post()
-            .uri("/articles/existing")
-            .to_request();
-        let resp = test::call_service(&mut app, req).await;
-        assert_eq!(resp.status().as_u16(), 200);
-        assert_eq!(test::read_body(resp).await, "existing!");
-    }
-
-    #[actix_rt::test]
     async fn test_create_and_read_article() {
-        let mut app = test::init_service(App::new().service(post).service(get_by_full_title)).await;
+        let pool = db::create_connection_pool();
+        let mut app = test::init_service(
+            App::new()
+                .data(pool.clone())
+                .service(create_article)
+                .service(get_by_full_title),
+        )
+        .await;
         let data = ArticlePostData {
             full_title: "existing".to_string(),
             wikitext: "==AA==\nasdf".to_string(),
@@ -113,6 +113,5 @@ mod tests {
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status().as_u16(), 200);
-        assert_eq!(test::read_body(resp).await, "existing!");
     }
 }

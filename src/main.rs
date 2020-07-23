@@ -17,7 +17,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .service(routes::index)
             .service(routes::articles::get_by_full_title)
-            .service(routes::articles::post)
+            .service(routes::articles::create_article)
     })
     .bind("127.0.0.1:8088")?
     .run()
