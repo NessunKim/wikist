@@ -1,6 +1,7 @@
 pub mod models;
 pub mod schema;
 
+use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
@@ -30,4 +31,18 @@ pub fn get_article_by_full_title(
         .optional()?;
 
     Ok(article)
+}
+
+pub fn create_article(conn: &SqliteConnection, new_article: &NewArticle) -> Result<Article> {
+    match get_article_by_full_title(conn, new_article.title)? {
+        Some(_) => Err(anyhow!("Article {}  already exists", new_article.title)),
+        None => {
+            diesel::insert_into(articles)
+                .values(new_article)
+                .execute(conn)?;
+            let article = get_article_by_full_title(conn, new_article.title)?
+                .expect("Failed to create article");
+            Ok(article)
+        }
+    }
 }

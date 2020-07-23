@@ -1,13 +1,6 @@
 use crate::db;
 use actix_web::{get, post, web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
-use serde_json;
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ArticlePostData {
-    full_title: String,
-    wikitext: String,
-}
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
@@ -32,9 +25,34 @@ pub async fn get_by_full_title(
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ArticlePostData {
+    full_title: String,
+    wikitext: String,
+}
+
 #[post("/articles")]
-pub async fn post(article: web::Json<ArticlePostData>) -> HttpResponse {
-    HttpResponse::Created().finish()
+pub async fn post(
+    pool: web::Data<db::DbPool>,
+    article: web::Json<ArticlePostData>,
+) -> Result<HttpResponse, Error> {
+    use db::models::NewArticle;
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    web::block(move || {
+        db::create_article(
+            &conn,
+            &NewArticle {
+                title: &article.full_title,
+                wikitext: &article.wikitext,
+            },
+        )
+    })
+    .await
+    .map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
+    Ok(HttpResponse::Created().finish())
 }
 
 #[cfg(test)]

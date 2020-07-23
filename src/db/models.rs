@@ -7,3 +7,10 @@ pub struct Article {
     pub title: String,
     pub wikitext: String,
 }
+
+#[derive(Insertable)]
+#[table_name = "articles"]
+pub struct NewArticle<'a> {
+    pub title: &'a str,
+    pub wikitext: &'a str,
+}
