@@ -1,10 +1,4 @@
-use lazy_static::lazy_static;
-use regex::Regex;
-
 pub fn render(input: &str) -> String {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^(={1,6})(.+?)={1,6}$").unwrap();
-    }
     input
         .split("\n")
         .map(|line| {
