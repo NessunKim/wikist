@@ -3,6 +3,9 @@ pub fn render(input: &str) -> String {
         .split("\n")
         .map(|line| {
             let trimmed = line.trim_end();
+            if !trimmed.starts_with("=") || !trimmed.ends_with("=") {
+                return trimmed.to_string();
+            }
             let level = if trimmed.starts_with("======") && trimmed.ends_with("======") {
                 6
             } else if trimmed.starts_with("=====") && trimmed.ends_with("=====") {
@@ -13,10 +16,8 @@ pub fn render(input: &str) -> String {
                 3
             } else if trimmed.starts_with("==") && trimmed.ends_with("==") {
                 2
-            } else if trimmed.starts_with("=") && trimmed.ends_with("=") {
-                1
             } else {
-                return trimmed.to_string();
+                1
             };
             format!(
                 "<h{}>{}</h{}>",
@@ -45,6 +46,7 @@ mod tests {
         assert_eq!(render("== a =="), "<h2>a</h2>");
         assert_eq!(render("== a == "), "<h2>a</h2>");
         assert_eq!(render(" ==a=="), " ==a==");
+        assert_eq!(render("===a=="), "<h2>=a</h2>");
         assert_eq!(render("==a==="), "<h2>a=</h2>");
         assert_eq!(render("x\n===ab===\na"), "x\n<h3>ab</h3>\na");
         assert_eq!(render("==x<b>a</b>x=="), "<h2>x<b>a</b>x</h2>");
