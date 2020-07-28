@@ -2,6 +2,7 @@ use parse_wiki_text::{Node, Output};
 use std::collections::VecDeque;
 
 mod bold_italic;
+mod heading;
 mod list;
 mod paragraph_break;
 mod table;
@@ -178,6 +179,7 @@ fn render_node(node: &Node, state: &mut State) -> String {
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
         Node::Text { value, .. } => render_text(value),
         Node::ParagraphBreak { .. } => paragraph_break::render_paragraph_break(state),
+        Node::Heading { level, nodes, .. } => heading::render_heading(level, nodes, state),
         Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
             bold_italic::render_bold_italic(state)
         }
