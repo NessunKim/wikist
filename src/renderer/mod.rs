@@ -23,6 +23,8 @@ pub enum BIStatus {
     ItalicOpen,
     ItalicClose,
 }
+
+#[derive(Debug)]
 enum BI {
     None,
     Bold,
@@ -143,11 +145,28 @@ fn render_nodes(nodes: &Vec<Node>, state: &mut State) -> String {
         }
     }
     print!("{:?}", state.bold_italic_queue);
+    print!("{:?}", bold_italic_stack);
+    let (first, last) = bold_italic_stack;
+    match last {
+        BI::Bold => state.bold_italic_queue.push_back((BIStatus::BoldClose, i)),
+        BI::Italic => state
+            .bold_italic_queue
+            .push_back((BIStatus::ItalicClose, i)),
+        _ => {}
+    }
+    match first {
+        BI::Bold => state.bold_italic_queue.push_back((BIStatus::BoldClose, i)),
+        BI::Italic => state
+            .bold_italic_queue
+            .push_back((BIStatus::ItalicClose, i)),
+        _ => {}
+    }
     nodes
         .iter()
         .map(|node| render_node(node, state))
         .collect::<Vec<String>>()
         .join("")
+        + &bold_italic::clear_queue(state)
 }
 
 fn render_text(value: &str) -> String {

@@ -19,6 +19,14 @@ pub fn render_bold_italic(state: &mut super::State) -> String {
     res
 }
 
+pub fn clear_queue(state: &mut super::State) -> String {
+    let mut ret = "".to_owned();
+    while !state.bold_italic_queue.is_empty() {
+        ret += &super::bold_italic::render_bold_italic(state);
+    }
+    ret
+}
+
 #[cfg(test)]
 mod tests {
     use parse_wiki_text::Configuration;

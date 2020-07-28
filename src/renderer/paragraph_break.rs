@@ -1,6 +1,7 @@
 pub fn render_paragraph_break(state: &mut super::State) -> String {
     let mut ret = "".to_owned();
-    ret
+    ret += &super::bold_italic::clear_queue(state);
+    return ret;
 }
 
 #[cfg(test)]
