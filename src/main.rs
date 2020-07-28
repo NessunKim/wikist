@@ -4,6 +4,7 @@ extern crate diesel;
 use actix_web::{middleware::Logger, App, HttpServer};
 mod db;
 mod parser;
+mod renderer;
 mod routes;
 
 #[actix_rt::main]

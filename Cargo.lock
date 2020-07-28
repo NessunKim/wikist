@@ -1085,6 +1085,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "parse_wiki_text"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd59a245c58efa02bd73c9462fd9d4c28952d650092c6bcba43b60b4707171dd"
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1608,10 +1614,9 @@ dependencies = [
  "diesel",
  "dotenv",
  "env_logger",
- "lazy_static",
  "log",
+ "parse_wiki_text",
  "r2d2",
- "regex",
  "serde",
  "serde_json",
 ]
