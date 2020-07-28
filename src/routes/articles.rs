@@ -2,6 +2,12 @@ use crate::db;
 use actix_web::{get, post, web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ArticleGetResponse {
+    full_title: String,
+    html: String,
+}
+
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
     pool: web::Data<db::DbPool>,
@@ -16,7 +22,13 @@ pub async fn get_by_full_title(
             HttpResponse::InternalServerError().finish()
         })?;
     if let Some(article) = article {
-        Ok(HttpResponse::Ok().json(article))
+        use parse_wiki_text::Configuration;
+        let result = Configuration::default().parse(&article.wikitext);
+        let resp = ArticleGetResponse {
+            full_title: article.title,
+            html: crate::renderer::render(&result),
+        };
+        Ok(HttpResponse::Ok().json(resp))
     } else {
         let full_title = path.0.clone();
         let res = HttpResponse::NotFound()

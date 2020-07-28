@@ -4,12 +4,13 @@ use std::collections::VecDeque;
 mod bold_italic;
 mod list;
 mod paragraph_break;
+mod table;
 
 pub struct State {
     bold_italic_queue: VecDeque<(BIStatus, i32)>,
 }
 
-fn render(ast: &Output) -> String {
+pub fn render(ast: &Output) -> String {
     let mut state = State {
         bold_italic_queue: VecDeque::new(),
     };
@@ -144,8 +145,6 @@ fn render_nodes(nodes: &Vec<Node>, state: &mut State) -> String {
             _ => {}
         }
     }
-    print!("{:?}", state.bold_italic_queue);
-    print!("{:?}", bold_italic_stack);
     let (first, last) = bold_italic_stack;
     match last {
         BI::Bold => state.bold_italic_queue.push_back((BIStatus::BoldClose, i)),
@@ -182,6 +181,12 @@ fn render_node(node: &Node, state: &mut State) -> String {
         Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
             bold_italic::render_bold_italic(state)
         }
+        Node::Table {
+            attributes,
+            captions,
+            rows,
+            ..
+        } => table::render_table(attributes, captions, rows, state),
         _ => "".to_string(),
     }
 }
