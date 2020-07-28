@@ -1,9 +1,5 @@
 pub fn render_paragraph_break(state: &mut super::State) -> String {
     let mut ret = "".to_owned();
-    if state.bold_open {
-        state.bold_open = false;
-        ret.push_str("</b>");
-    }
     ret
 }
 

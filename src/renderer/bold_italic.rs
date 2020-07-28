@@ -1,48 +1,22 @@
-pub fn render_bold(state: &mut super::State) -> String {
-    println!("bold");
-    if state.bold_open {
-        state.bold_open = false;
-        "</b>".to_owned()
-    } else {
-        state.bold_open = true;
-        "<b>".to_owned()
-    }
-}
-
-pub fn render_italic(state: &mut super::State) -> String {
-    println!("italic");
-    if state.italic_open {
-        state.italic_open = false;
-        "</i>".to_owned()
-    } else {
-        state.italic_open = true;
-        "<i>".to_owned()
-    }
-}
-
 pub fn render_bold_italic(state: &mut super::State) -> String {
-    let mut ret = "".to_owned();
-    let mut bold_done = false;
-    let mut italic_done = false;
-    if state.bold_open {
-        state.bold_open = false;
-        ret.push_str("</b>");
-        bold_done = true
+    use super::BIStatus;
+    let mut last_n = -1;
+    let mut res = "".to_owned();
+    while let Some((st, n)) = state.bold_italic_queue.front() {
+        if last_n == -1 {
+            last_n = *n;
+        } else if last_n != *n {
+            break;
+        }
+        match st {
+            BIStatus::BoldOpen => res += "<b>",
+            BIStatus::BoldClose => res += "</b>",
+            BIStatus::ItalicOpen => res += "<i>",
+            BIStatus::ItalicClose => res += "</i>",
+        }
+        state.bold_italic_queue.pop_front();
     }
-    if state.italic_open {
-        state.italic_open = false;
-        ret.push_str("</i>");
-        italic_done = true
-    }
-    if !state.italic_open && !bold_done {
-        state.italic_open = true;
-        ret.push_str("<i>");
-    }
-    if !state.bold_open && !italic_done {
-        state.bold_open = true;
-        ret.push_str("<b>");
-    }
-    ret
+    res
 }
 
 #[cfg(test)]

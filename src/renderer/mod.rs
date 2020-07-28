@@ -1,43 +1,148 @@
 use parse_wiki_text::{Node, Output};
+use std::collections::VecDeque;
 
 mod bold_italic;
 mod list;
 mod paragraph_break;
 
 pub struct State {
-    bold_open: bool,
-    italic_open: bool,
+    bold_italic_queue: VecDeque<(BIStatus, i32)>,
 }
 
 fn render(ast: &Output) -> String {
     let mut state = State {
-        bold_open: false,
-        italic_open: false,
+        bold_italic_queue: VecDeque::new(),
     };
     render_nodes(&ast.nodes, &mut state)
 }
 
+#[derive(Debug)]
+pub enum BIStatus {
+    BoldOpen,
+    BoldClose,
+    ItalicOpen,
+    ItalicClose,
+}
+enum BI {
+    None,
+    Bold,
+    Italic,
+}
+
 fn render_nodes(nodes: &Vec<Node>, state: &mut State) -> String {
     // split bolditalic
-    let mut bold_italic: &Node;
-    let mut bold_open_first: bool = false;
-    let mut italic_open_first: bool = false;
-    let mut bold_close_first: bool = false;
-    let mut italic_close_first: bool = false;
+    let mut bold_italic_stack: (BI, BI) = (BI::None, BI::None);
+
+    let mut i = 0;
     for node in nodes {
         match node {
             Node::Bold { .. } => {
-                if !italic_open_first {
-                    bold_open_first = true
-                }
+                match bold_italic_stack {
+                    (BI::None, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldOpen, i));
+                        bold_italic_stack = (BI::Bold, BI::None)
+                    }
+                    (BI::Italic, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        bold_italic_stack = (BI::Italic, BI::Bold)
+                    }
+                    (BI::Italic, BI::Bold) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        bold_italic_stack = (BI::Italic, BI::None)
+                    }
+                    (BI::Bold, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        bold_italic_stack = (BI::None, BI::None)
+                    }
+                    (BI::Bold, BI::Italic) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::ItalicOpen, i));
+                        bold_italic_stack = (BI::Italic, BI::None)
+                    }
+                    (BI::None, _) | (BI::Bold, BI::Bold) | (BI::Italic, BI::Italic) => panic!(),
+                };
+                i += 1;
             }
-            Node::Italic { .. } => {}
+            Node::Italic { .. } => {
+                match bold_italic_stack {
+                    (BI::None, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::ItalicOpen, i));
+                        bold_italic_stack = (BI::Italic, BI::None)
+                    }
+                    (BI::Bold, BI::None) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        bold_italic_stack = (BI::Bold, BI::Italic)
+                    }
+                    (BI::Bold, BI::Italic) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        bold_italic_stack = (BI::Bold, BI::None)
+                    }
+                    (BI::Italic, BI::None) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        bold_italic_stack = (BI::None, BI::None)
+                    }
+                    (BI::Italic, BI::Bold) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::BoldOpen, i));
+                        bold_italic_stack = (BI::Bold, BI::None)
+                    }
+                    (BI::None, _) | (BI::Bold, BI::Bold) | (BI::Italic, BI::Italic) => panic!(),
+                };
+                i += 1;
+            }
             Node::BoldItalic { .. } => {
-                bold_italic = node;
+                match bold_italic_stack {
+                    (BI::None, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::ItalicOpen, i));
+                        state.bold_italic_queue.push_back((BIStatus::BoldOpen, i));
+                        bold_italic_stack = (BI::Italic, BI::Bold)
+                    }
+                    (BI::Bold, BI::None) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::ItalicOpen, i));
+                        bold_italic_stack = (BI::Italic, BI::None)
+                    }
+                    (BI::Bold, BI::Italic) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        bold_italic_stack = (BI::None, BI::None)
+                    }
+                    (BI::Italic, BI::None) => {
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        state.bold_italic_queue.push_back((BIStatus::BoldOpen, i));
+                        bold_italic_stack = (BI::Bold, BI::None)
+                    }
+                    (BI::Italic, BI::Bold) => {
+                        state.bold_italic_queue.push_back((BIStatus::BoldClose, i));
+                        state
+                            .bold_italic_queue
+                            .push_back((BIStatus::ItalicClose, i));
+                        bold_italic_stack = (BI::None, BI::None)
+                    }
+                    (BI::None, _) | (BI::Bold, BI::Bold) | (BI::Italic, BI::Italic) => panic!(),
+                };
+                i += 1;
             }
             _ => {}
         }
     }
+    print!("{:?}", state.bold_italic_queue);
     nodes
         .iter()
         .map(|node| render_node(node, state))
@@ -55,9 +160,9 @@ fn render_node(node: &Node, state: &mut State) -> String {
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
         Node::Text { value, .. } => render_text(value),
         Node::ParagraphBreak { .. } => paragraph_break::render_paragraph_break(state),
-        Node::Bold { .. } => bold_italic::render_bold(state),
-        Node::Italic { .. } => bold_italic::render_italic(state),
-        Node::BoldItalic { .. } => bold_italic::render_bold_italic(state),
+        Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
+            bold_italic::render_bold_italic(state)
+        }
         _ => "".to_string(),
     }
 }
