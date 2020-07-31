@@ -4,7 +4,7 @@ fn render_list_items(item: &ListItem, state: &mut super::State) -> String {
     format!("<li>{}</li>", super::render_nodes(&item.nodes, state))
 }
 
-pub fn render_unordered_list(items: &Vec<ListItem>, state: &mut super::State) -> String {
+pub fn render_unordered_list(items: &[ListItem], state: &mut super::State) -> String {
     format!(
         "<ul>{}</ul>\n",
         items
@@ -15,7 +15,7 @@ pub fn render_unordered_list(items: &Vec<ListItem>, state: &mut super::State) ->
     )
 }
 
-pub fn render_ordered_list(items: &Vec<ListItem>, state: &mut super::State) -> String {
+pub fn render_ordered_list(items: &[ListItem], state: &mut super::State) -> String {
     format!(
         "<ol>{}</ol>\n",
         items
@@ -37,7 +37,7 @@ fn render_definition_list_items(item: &DefinitionListItem, state: &mut super::St
     }
 }
 
-pub fn render_definition_list(items: &Vec<DefinitionListItem>, state: &mut super::State) -> String {
+pub fn render_definition_list(items: &[DefinitionListItem], state: &mut super::State) -> String {
     format!(
         "<dl>{}</dl>\n",
         items

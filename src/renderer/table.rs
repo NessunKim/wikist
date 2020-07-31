@@ -1,15 +1,15 @@
 use parse_wiki_text::{Node, TableCaption, TableCell, TableCellType, TableRow};
 
 pub fn render_table(
-    attributes: &Vec<Node>,
-    captions: &Vec<TableCaption>,
-    rows: &Vec<TableRow>,
+    attributes: &[Node],
+    captions: &[TableCaption],
+    rows: &[TableRow],
     state: &mut super::State,
 ) -> String {
     format!("<table>\n{}</table>\n", render_rows(rows, state))
 }
 
-fn render_rows(rows: &Vec<TableRow>, state: &mut super::State) -> String {
+fn render_rows(rows: &[TableRow], state: &mut super::State) -> String {
     format!(
         "<tbody>{}</tbody>",
         rows.iter()

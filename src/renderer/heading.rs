@@ -1,6 +1,6 @@
 use parse_wiki_text::Node;
 
-pub fn render_heading(level: &u8, nodes: &Vec<Node>, state: &mut super::State) -> String {
+pub fn render_heading(level: &u8, nodes: &[Node], state: &mut super::State) -> String {
     format!(
         "<h{}>{}</h{}>\n",
         level,

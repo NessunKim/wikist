@@ -1,6 +1,6 @@
 use parse_wiki_text::Node;
 
-pub fn render_external_link(nodes: &Vec<Node>, state: &mut super::State) -> String {
+pub fn render_external_link(nodes: &[Node], state: &mut super::State) -> String {
     if let Node::Text { value, .. } = nodes[0] {
         let splitted = value.splitn(2, " ").collect::<Vec<&str>>();
         let target = splitted[0];
