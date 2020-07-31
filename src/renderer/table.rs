@@ -11,12 +11,35 @@ pub fn render_table(
     } else {
         "<table>".to_owned()
     };
+    let caption_text = captions
+        .iter()
+        .map(|caption| render_caption(&caption, state))
+        .collect::<Vec<String>>()
+        .join("");
     format!(
-        "{}{}\n{}</table>{}",
+        "{}{}{}\n{}</table>{}",
         super::paragraph::close_paragraph(state),
         open_tag,
+        caption_text,
         render_rows(rows, state),
         super::paragraph::open_paragraph()
+    )
+}
+
+fn render_caption(caption: &TableCaption, state: &mut super::State) -> String {
+    let open_tag = if let Some(attributes) = &caption.attributes {
+        if attributes.len() > 0 {
+            format!("<caption {}>", super::render_nodes(&attributes, state))
+        } else {
+            "<caption>".to_owned()
+        }
+    } else {
+        "<caption>".to_owned()
+    };
+    format!(
+        "\n{}{}\n</caption>",
+        open_tag,
+        super::render_nodes(&caption.content, state)
     )
 }
 
@@ -60,10 +83,10 @@ fn render_cell(cell: &TableCell, state: &mut super::State) -> String {
         if attributes.len() > 0 {
             format!("<{} {}>", tag_name, super::render_nodes(&attributes, state))
         } else {
-            format!("<{}>", tag_name).to_owned()
+            format!("<{}>", tag_name)
         }
     } else {
-        format!("<{}>", tag_name).to_owned()
+        format!("<{}>", tag_name)
     };
     if let Some(break_pos) = break_pos {
         let before_break = super::render_nodes(&cell.content[..break_pos], state);
@@ -117,6 +140,26 @@ mod tests {
         assert_eq!(
             render(&result),
             "<table class=\"t\">\n<tbody><tr class=\"r\">\n<td class=\"c\">content\n</td></tr></tbody></table>\n",
+        );
+
+        let wikitext = "{|
+|+ c1
+|+ c2
+|-
+| content
+|}";
+        let result = Configuration::default().parse(wikitext);
+        assert_eq!(
+            render(&result),
+            "<table>
+<caption>c1
+</caption>
+<caption>c2
+</caption>
+<tbody><tr>
+<td>content
+</td></tr></tbody></table>
+",
         );
     }
 }
