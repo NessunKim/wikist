@@ -6,9 +6,15 @@ pub fn render_table(
     rows: &[TableRow],
     state: &mut super::State,
 ) -> String {
+    let open_tag = if attributes.len() > 0 {
+        format!("<table {}>", super::render_nodes(attributes, state))
+    } else {
+        "<table>".to_owned()
+    };
     format!(
-        "{}<table>\n{}</table>{}",
+        "{}{}\n{}</table>{}",
         super::paragraph::close_paragraph(state),
+        open_tag,
         render_rows(rows, state),
         super::paragraph::open_paragraph()
     )
@@ -25,8 +31,14 @@ fn render_rows(rows: &[TableRow], state: &mut super::State) -> String {
 }
 
 fn render_row(row: &TableRow, state: &mut super::State) -> String {
+    let open_tag = if row.attributes.len() > 0 {
+        format!("<tr {}>", super::render_nodes(&row.attributes, state),)
+    } else {
+        "<tr>".to_owned()
+    };
     format!(
-        "<tr>\n{}</tr>",
+        "{}\n{}</tr>",
+        open_tag,
         row.cells
             .iter()
             .map(|cell| render_cell(&cell, state))
@@ -36,38 +48,38 @@ fn render_row(row: &TableRow, state: &mut super::State) -> String {
 }
 
 fn render_cell(cell: &TableCell, state: &mut super::State) -> String {
-    let break_pos = cell.content.iter().position(|x| {
-        if let Node::ParagraphBreak { .. } = x {
-            true
+    let tag_name = match cell.type_ {
+        TableCellType::Heading => "th",
+        TableCellType::Ordinary => "td",
+    };
+    let break_pos = cell
+        .content
+        .iter()
+        .position(|x| matches!(x, Node::ParagraphBreak { .. }));
+    let open_tag = if let Some(attributes) = &cell.attributes {
+        if attributes.len() > 0 {
+            format!("<{} {}>", tag_name, super::render_nodes(&attributes, state),)
         } else {
-            false
+            format!("<{}>", tag_name).to_owned()
         }
-    });
+    } else {
+        format!("<{}>", tag_name).to_owned()
+    };
     if let Some(break_pos) = break_pos {
         let before_break = super::render_nodes(&cell.content[..break_pos], state);
         let after_break = super::render_nodes(&cell.content[break_pos + 1..], state);
-        match cell.type_ {
-            TableCellType::Heading => format!(
-                "<th>{}{}{}{}\n</th>",
-                before_break,
-                super::paragraph::open_paragraph(),
-                after_break,
-                super::paragraph::close_paragraph(state)
-            ),
-            TableCellType::Ordinary => format!(
-                "<td>{}{}{}{}\n</td>",
-                before_break,
-                super::paragraph::open_paragraph(),
-                after_break,
-                super::paragraph::close_paragraph(state)
-            ),
-        }
+        format!(
+            "{}{}{}{}{}\n</{}>",
+            open_tag,
+            before_break,
+            super::paragraph::open_paragraph(),
+            after_break,
+            super::paragraph::close_paragraph(state),
+            tag_name
+        )
     } else {
         let content = super::render_nodes(&cell.content, state);
-        match cell.type_ {
-            TableCellType::Heading => format!("<th>{}\n</th>", content),
-            TableCellType::Ordinary => format!("<td>{}\n</td>", content),
-        }
+        format!("{}{}\n</{}>", open_tag, content, tag_name)
     }
 }
 
@@ -98,6 +110,13 @@ mod tests {
         assert_eq!(
             render(&result),
             "<table>\n<tbody><tr>\n<td>A\n<p>asdf\n</p>\n</td></tr></tbody></table>\n",
+        );
+
+        let wikitext = "{| class=\"t\"\n|- class=\"r\"\n| class=\"c\" | content\n|}";
+        let result = Configuration::default().parse(wikitext);
+        assert_eq!(
+            render(&result),
+            "<table class=\"t\">\n<tbody><tr class=\"r\">\n<td class=\"c\">content\n</td></tr></tbody></table>\n",
         );
     }
 }
