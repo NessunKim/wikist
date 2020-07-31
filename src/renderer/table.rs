@@ -32,7 +32,7 @@ fn render_rows(rows: &[TableRow], state: &mut super::State) -> String {
 
 fn render_row(row: &TableRow, state: &mut super::State) -> String {
     let open_tag = if row.attributes.len() > 0 {
-        format!("<tr {}>", super::render_nodes(&row.attributes, state),)
+        format!("<tr {}>", super::render_nodes(&row.attributes, state))
     } else {
         "<tr>".to_owned()
     };
@@ -58,7 +58,7 @@ fn render_cell(cell: &TableCell, state: &mut super::State) -> String {
         .position(|x| matches!(x, Node::ParagraphBreak { .. }));
     let open_tag = if let Some(attributes) = &cell.attributes {
         if attributes.len() > 0 {
-            format!("<{} {}>", tag_name, super::render_nodes(&attributes, state),)
+            format!("<{} {}>", tag_name, super::render_nodes(&attributes, state))
         } else {
             format!("<{}>", tag_name).to_owned()
         }
