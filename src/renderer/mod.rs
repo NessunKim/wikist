@@ -177,6 +177,7 @@ fn render_node(node: &Node, state: &mut State) -> String {
     match node {
         Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
+        Node::DefinitionList { items, .. } => list::render_definition_list(items, state),
         Node::Text { value, .. } => render_text(value),
         Node::ParagraphBreak { .. } => paragraph_break::render_paragraph_break(state),
         Node::Heading { level, nodes, .. } => heading::render_heading(level, nodes, state),
