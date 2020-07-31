@@ -5,7 +5,7 @@ mod bold_italic;
 mod heading;
 mod link;
 mod list;
-mod paragraph_break;
+mod paragraph;
 mod table;
 
 pub struct State {
@@ -18,7 +18,9 @@ pub fn render(ast: &Output) -> String {
         bold_italic_queue: VecDeque::new(),
         external_link_auto_number: 0,
     };
-    render_nodes(&ast.nodes, &mut state)
+    format!("<p>{}</p>", render_nodes(&ast.nodes, &mut state))
+        .replace("<p></p>", "")
+        .replace("<p>\n</p>", "")
 }
 
 #[derive(Debug)]
@@ -178,16 +180,16 @@ fn render_text(value: &str) -> String {
 
 fn render_node(node: &Node, state: &mut State) -> String {
     match node {
-        Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
-        Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
-        Node::DefinitionList { items, .. } => list::render_definition_list(items, state),
         Node::Text { value, .. } => render_text(value),
-        Node::ParagraphBreak { .. } => paragraph_break::render_paragraph_break(state),
-        Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
-        Node::Heading { level, nodes, .. } => heading::render_heading(level, nodes, state),
         Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
             bold_italic::render_bold_italic(state)
         }
+        Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
+        Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
+        Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
+        Node::DefinitionList { items, .. } => list::render_definition_list(items, state),
+        Node::ParagraphBreak { .. } => paragraph::render_paragraph_break(state),
+        Node::Heading { level, nodes, .. } => heading::render_heading(level, nodes, state),
         Node::Table {
             attributes,
             captions,

@@ -35,21 +35,21 @@ mod tests {
         assert!(result.warnings.is_empty());
         assert_eq!(
             render(&result),
-            r#"<a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[1]</a>"#
+            r#"<p><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[1]</a></p>"#
         );
         let wikitext = "[http://www.google.com a'''aa''']";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
         assert_eq!(
             render(&result),
-            r#"<a target="_blank" rel="nofollow noreferrer noopener" class="external text" href="http://www.google.com">a<b>aa</b></a>"#
+            r#"<p><a target="_blank" rel="nofollow noreferrer noopener" class="external text" href="http://www.google.com">a<b>aa</b></a></p>"#
         );
         let wikitext = "[http://www.google.com][http://www.google.com]";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
         assert_eq!(
             render(&result),
-            r#"<a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[1]</a><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[2]</a>"#
+            r#"<p><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[1]</a><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[2]</a></p>"#
         );
     }
 }

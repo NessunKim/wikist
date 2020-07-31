@@ -6,23 +6,27 @@ fn render_list_items(item: &ListItem, state: &mut super::State) -> String {
 
 pub fn render_unordered_list(items: &[ListItem], state: &mut super::State) -> String {
     format!(
-        "<ul>{}</ul>\n",
+        "{}<ul>{}</ul>{}",
+        super::paragraph::close_paragraph(state),
         items
             .iter()
             .map(|node| render_list_items(node, state))
             .collect::<Vec<String>>()
-            .join("\n")
+            .join("\n"),
+        super::paragraph::open_paragraph()
     )
 }
 
 pub fn render_ordered_list(items: &[ListItem], state: &mut super::State) -> String {
     format!(
-        "<ol>{}</ol>\n",
+        "{}<ol>{}</ol>{}",
+        super::paragraph::close_paragraph(state),
         items
             .iter()
             .map(|node| render_list_items(node, state))
             .collect::<Vec<String>>()
-            .join("\n")
+            .join("\n"),
+        super::paragraph::open_paragraph()
     )
 }
 
@@ -39,12 +43,14 @@ fn render_definition_list_items(item: &DefinitionListItem, state: &mut super::St
 
 pub fn render_definition_list(items: &[DefinitionListItem], state: &mut super::State) -> String {
     format!(
-        "<dl>{}</dl>\n",
+        "{}<dl>{}</dl>{}",
+        super::paragraph::close_paragraph(state),
         items
             .iter()
             .map(|node| render_definition_list_items(node, state))
             .collect::<Vec<String>>()
-            .join("\n")
+            .join("\n"),
+        super::paragraph::open_paragraph()
     )
 }
 

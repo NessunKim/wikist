@@ -2,10 +2,12 @@ use parse_wiki_text::Node;
 
 pub fn render_heading(level: &u8, nodes: &[Node], state: &mut super::State) -> String {
     format!(
-        "<h{}>{}</h{}>\n",
+        "{}<h{}>{}</h{}>{}",
+        super::paragraph::close_paragraph(state),
         level,
         super::render_nodes(&nodes, state),
-        level
+        level,
+        super::paragraph::open_paragraph()
     )
 }
 

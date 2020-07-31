@@ -37,16 +37,16 @@ mod tests {
         let wikitext = "'''''aaa'''''";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<i><b>aaa</b></i>");
+        assert_eq!(render(&result), "<p><i><b>aaa</b></i></p>");
         let wikitext = "'''''asdf''bb'''";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<i><b>asdf</b></i><b>bb</b>");
+        assert_eq!(render(&result), "<p><i><b>asdf</b></i><b>bb</b></p>");
         // below is the right way to render, but it's difficult
-        // assert_eq!(render(&result), "<b><i>asdf</i>bb</b>");
+        // assert_eq!(render(&result), "<p><b><i>asdf</i>bb</b></p>");
         let wikitext = "'''''asdf'''bb''";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<i><b>asdf</b>bb</i>");
+        assert_eq!(render(&result), "<p><i><b>asdf</b>bb</i></p>");
     }
 }
