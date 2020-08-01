@@ -19,3 +19,4 @@ dotenv = "0.15.0"
 anyhow = { version = "1.0" }
 parse_wiki_text = "0.1.5"
 percent-encoding = "2.1"
+htmlescape = "0.3"
