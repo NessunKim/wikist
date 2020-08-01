@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 
 mod bold_italic;
 mod heading;
+mod hr;
 mod link;
 mod list;
 mod paragraph;
@@ -180,6 +181,10 @@ fn render_text(value: &str) -> String {
     value.to_string()
 }
 
+fn render_hr(value: &str) -> String {
+    value.to_string()
+}
+
 fn render_node(node: &Node, state: &mut State) -> String {
     match node {
         Node::Text { value, .. } => render_text(value),
@@ -188,6 +193,7 @@ fn render_node(node: &Node, state: &mut State) -> String {
         }
         Node::Link { target, text, .. } => link::render_internal_link(target, text, state),
         Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
+        Node::HorizontalDivider { .. } => hr::render_hr(state),
         Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
         Node::DefinitionList { items, .. } => list::render_definition_list(items, state),
