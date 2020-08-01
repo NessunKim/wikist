@@ -8,6 +8,7 @@ mod hr;
 mod link;
 mod list;
 mod paragraph;
+mod preformatted;
 mod table;
 
 pub struct State {
@@ -189,17 +190,18 @@ fn render_entity(ch: &char) -> String {
 fn render_node(node: &Node, state: &mut State) -> String {
     match node {
         Node::Text { value, .. } => render_text(value),
+        Node::CharacterEntity { character, .. } => render_entity(character),
         Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
             bold_italic::render_bold_italic(state)
         }
         Node::Link { target, text, .. } => link::render_internal_link(target, text, state),
         Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
         Node::HorizontalDivider { .. } => hr::render_hr(state),
-        Node::CharacterEntity { character, .. } => render_entity(character),
         Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
         Node::DefinitionList { items, .. } => list::render_definition_list(items, state),
         Node::ParagraphBreak { .. } => paragraph::render_paragraph_break(state),
+        Node::Preformatted { nodes, .. } => preformatted::render_preformatted(nodes, state),
         Node::Heading { level, nodes, .. } => heading::render_heading(level, nodes, state),
         Node::Table {
             attributes,
