@@ -1616,6 +1616,7 @@ dependencies = [
  "env_logger",
  "log",
  "parse_wiki_text",
+ "percent-encoding",
  "r2d2",
  "serde",
  "serde_json",

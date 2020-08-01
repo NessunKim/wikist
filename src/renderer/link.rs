@@ -1,4 +1,15 @@
 use parse_wiki_text::Node;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+
+pub fn render_internal_link(target: &str, text: &[Node], state: &mut super::State) -> String {
+    let text_rendered = super::render_nodes(text, state);
+    format!(
+        r#"<a href="{}{}">{}</a>"#,
+        state.link_base_url,
+        utf8_percent_encode(target, NON_ALPHANUMERIC).to_string(),
+        text_rendered
+    )
+}
 
 pub fn render_external_link(nodes: &[Node], state: &mut super::State) -> String {
     if let Node::Text { value, .. } = nodes[0] {
@@ -26,6 +37,28 @@ pub fn render_external_link(nodes: &[Node], state: &mut super::State) -> String 
 #[cfg(test)]
 mod tests {
     use parse_wiki_text::Configuration;
+
+    #[test]
+    fn test_render_internal_link() {
+        use super::super::*;
+        let wikitext = "[[aa]]";
+        let result = Configuration::default().parse(wikitext);
+        assert!(result.warnings.is_empty());
+        assert_eq!(render(&result), r#"<p><a href="/wiki/aa">aa</a></p>"#);
+
+        let wikitext = "[[aa|bb]]";
+        let result = Configuration::default().parse(wikitext);
+        assert!(result.warnings.is_empty());
+        assert_eq!(render(&result), r#"<p><a href="/wiki/aa">bb</a></p>"#);
+
+        let wikitext = "[[aa|'''bb''']]";
+        let result = Configuration::default().parse(wikitext);
+        assert!(result.warnings.is_empty());
+        assert_eq!(
+            render(&result),
+            r#"<p><a href="/wiki/aa"><b>bb</b></a></p>"#
+        );
+    }
 
     #[test]
     fn test_render_external_link() {

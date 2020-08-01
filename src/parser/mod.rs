@@ -1,4 +1,4 @@
-use parse_wiki_text::{Configuration, Node};
+use parse_wiki_text::Configuration;
 fn parse(wikitext: &str) {
     let result = Configuration::default().parse(wikitext);
     assert!(result.warnings.is_empty());

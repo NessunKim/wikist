@@ -9,12 +9,14 @@ mod paragraph;
 mod table;
 
 pub struct State {
+    link_base_url: String,
     bold_italic_queue: VecDeque<(BIStatus, i32)>,
     external_link_auto_number: i32,
 }
 
 pub fn render(ast: &Output) -> String {
     let mut state = State {
+        link_base_url: "/wiki/".to_owned(),
         bold_italic_queue: VecDeque::new(),
         external_link_auto_number: 0,
     };
@@ -184,6 +186,7 @@ fn render_node(node: &Node, state: &mut State) -> String {
         Node::Bold { .. } | Node::Italic { .. } | Node::BoldItalic { .. } => {
             bold_italic::render_bold_italic(state)
         }
+        Node::Link { target, text, .. } => link::render_internal_link(target, text, state),
         Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
         Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),
@@ -196,7 +199,7 @@ fn render_node(node: &Node, state: &mut State) -> String {
             rows,
             ..
         } => table::render_table(attributes, captions, rows, state),
-        _ => "".to_string(),
+        Node::Comment { .. } | _ => "".to_string(),
     }
 }
 
