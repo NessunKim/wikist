@@ -1,5 +1,3 @@
-use parse_wiki_text::Node;
-
 pub fn render_hr(state: &mut super::State) -> String {
     format!(
         "{}<hr>{}",
