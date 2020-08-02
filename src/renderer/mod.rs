@@ -1,3 +1,4 @@
+use crate::db::models::Article;
 use htmlescape::encode_minimal;
 use parse_wiki_text::{Node, Output};
 use std::collections::VecDeque;
@@ -12,16 +13,20 @@ mod preformatted;
 mod table;
 
 pub struct State {
-    link_base_url: String,
+    read_base_url: String,
+    edit_base_url: String,
     bold_italic_queue: VecDeque<(BIStatus, i32)>,
     external_link_auto_number: i32,
+    get_article: fn(full_title: &str) -> Option<Article>,
 }
 
 pub fn render(ast: &Output) -> String {
     let mut state = State {
-        link_base_url: "/wiki/".to_owned(),
+        read_base_url: "/wiki/".to_owned(),
+        edit_base_url: "/edit/".to_owned(),
         bold_italic_queue: VecDeque::new(),
         external_link_auto_number: 0,
+        get_article: |_t| None,
     };
     format!("<p>{}</p>", render_nodes(&ast.nodes, &mut state))
         .replace("<p></p>", "")

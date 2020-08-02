@@ -3,12 +3,21 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 pub fn render_internal_link(target: &str, text: &[Node], state: &mut super::State) -> String {
     let text_rendered = super::render_nodes(text, state);
-    format!(
-        r#"<a href="{}{}">{}</a>"#,
-        state.link_base_url,
-        utf8_percent_encode(target, NON_ALPHANUMERIC).to_string(),
-        text_rendered
-    )
+    if let Some(_) = (state.get_article)(target) {
+        format!(
+            r#"<a href="{}{}">{}</a>"#,
+            state.read_base_url,
+            utf8_percent_encode(target, NON_ALPHANUMERIC).to_string(),
+            text_rendered
+        )
+    } else {
+        format!(
+            r#"<a class="new" href="{}{}">{}</a>"#,
+            state.edit_base_url,
+            utf8_percent_encode(target, NON_ALPHANUMERIC).to_string(),
+            text_rendered
+        )
+    }
 }
 
 pub fn render_external_link(nodes: &[Node], state: &mut super::State) -> String {
@@ -44,19 +53,25 @@ mod tests {
         let wikitext = "[[aa]]";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), r#"<p><a href="/wiki/aa">aa</a></p>"#);
+        assert_eq!(
+            render(&result),
+            r#"<p><a class="new" href="/edit/aa">aa</a></p>"#
+        );
 
         let wikitext = "[[aa|bb]]";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), r#"<p><a href="/wiki/aa">bb</a></p>"#);
+        assert_eq!(
+            render(&result),
+            r#"<p><a class="new" href="/edit/aa">bb</a></p>"#
+        );
 
         let wikitext = "[[aa|'''bb''']]";
         let result = Configuration::default().parse(wikitext);
         assert!(result.warnings.is_empty());
         assert_eq!(
             render(&result),
-            r#"<p><a href="/wiki/aa"><b>bb</b></a></p>"#
+            r#"<p><a class="new" href="/edit/aa"><b>bb</b></a></p>"#
         );
     }
 
