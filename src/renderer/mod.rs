@@ -12,21 +12,31 @@ mod paragraph;
 mod preformatted;
 mod table;
 
+pub struct CategoryLink {
+    target: String,
+    ordinal: String,
+}
+
 pub struct State {
     read_base_url: String,
     edit_base_url: String,
+    get_article: fn(full_title: &str) -> Option<Article>,
+
     bold_italic_queue: VecDeque<(BIStatus, i32)>,
     external_link_auto_number: i32,
-    get_article: fn(full_title: &str) -> Option<Article>,
+    internal_links: Vec<String>,
+    categories: Vec<CategoryLink>,
 }
 
 pub fn render(ast: &Output) -> String {
     let mut state = State {
         read_base_url: "/wiki/".to_owned(),
         edit_base_url: "/edit/".to_owned(),
+        get_article: |_t| None,
         bold_italic_queue: VecDeque::new(),
         external_link_auto_number: 0,
-        get_article: |_t| None,
+        internal_links: vec![],
+        categories: vec![],
     };
     format!("<p>{}</p>", render_nodes(&ast.nodes, &mut state))
         .replace("<p></p>", "")
@@ -201,6 +211,9 @@ fn render_node(node: &Node, state: &mut State) -> String {
         }
         Node::Link { target, text, .. } => link::render_internal_link(target, text, state),
         Node::ExternalLink { nodes, .. } => link::render_external_link(nodes, state),
+        Node::Category {
+            target, ordinal, ..
+        } => link::render_category(target, ordinal, state),
         Node::HorizontalDivider { .. } => hr::render_hr(state),
         Node::OrderedList { items, .. } => list::render_ordered_list(items, state),
         Node::UnorderedList { items, .. } => list::render_unordered_list(items, state),

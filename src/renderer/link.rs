@@ -2,6 +2,7 @@ use parse_wiki_text::Node;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 pub fn render_internal_link(target: &str, text: &[Node], state: &mut super::State) -> String {
+    state.internal_links.push(target.to_owned());
     let text_rendered = super::render_nodes(text, state);
     if let Some(_) = (state.get_article)(target) {
         format!(
@@ -43,6 +44,16 @@ pub fn render_external_link(nodes: &[Node], state: &mut super::State) -> String 
         "<code>External link does not starts with text node</code>".to_owned()
     }
 }
+
+pub fn render_category(target: &str, ordinal: &[Node], state: &mut super::State) -> String {
+    let ordinal = super::render_nodes(ordinal, state);
+    state.categories.push(super::CategoryLink {
+        target: target.to_owned(),
+        ordinal,
+    });
+    "".to_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use parse_wiki_text::Configuration;
@@ -99,5 +110,19 @@ mod tests {
             render(&result),
             r#"<p><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[1]</a><a target="_blank" rel="nofollow noreferrer noopener" class="external autonumber" href="http://www.google.com">[2]</a></p>"#
         );
+    }
+
+    #[test]
+    fn test_render_category() {
+        use super::super::*;
+        let wikitext = "[[category:asdf]]";
+        let result = Configuration::default().parse(wikitext);
+        assert!(result.warnings.is_empty());
+        assert_eq!(render(&result), "");
+
+        let wikitext = "[[category:asdf|asfd]]";
+        let result = Configuration::default().parse(wikitext);
+        assert!(result.warnings.is_empty());
+        assert_eq!(render(&result), "");
     }
 }
