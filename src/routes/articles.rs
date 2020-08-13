@@ -1,12 +1,7 @@
+use super::{Response, ResponseResult};
 use crate::db;
 use actix_web::{get, post, web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ArticleGetResponse {
-    full_title: String,
-    html: String,
-}
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
@@ -24,9 +19,12 @@ pub async fn get_by_full_title(
     if let Some(article) = article {
         use parse_wiki_text::Configuration;
         let result = Configuration::default().parse(&article.wikitext);
-        let resp = ArticleGetResponse {
-            full_title: article.title,
-            html: crate::renderer::render(&result),
+        let resp = Response {
+            status: "OK".to_owned(),
+            result: ResponseResult::ArticleGet {
+                full_title: article.title,
+                html: crate::renderer::render(&result),
+            },
         };
         Ok(HttpResponse::Ok().json(resp))
     } else {
@@ -112,7 +110,7 @@ mod tests {
         )
         .await;
         let data = ArticlePostData {
-            full_title: "existing".to_string(),
+            full_title: "title".to_string(),
             wikitext: "==AA==\nasdf".to_string(),
         };
         let req = test::TestRequest::post()
@@ -120,10 +118,15 @@ mod tests {
             .uri("/articles")
             .to_request();
         test::call_service(&mut app, req).await;
-        let req = test::TestRequest::get()
-            .uri("/articles/existing")
-            .to_request();
-        let resp = test::call_service(&mut app, req).await;
-        assert_eq!(resp.status().as_u16(), 200);
+        let req = test::TestRequest::get().uri("/articles/title").to_request();
+        let result: Response = test::read_response_json(&mut app, req).await;
+        println!("{:#?}", result);
+        assert_eq!(result.status, "OK");
+        if let ResponseResult::ArticleGet { full_title, html } = result.result {
+            assert_eq!(full_title, "title");
+            assert_eq!(html, "<h2>AA</h2>\n<p>asdf</p>");
+        } else {
+            panic!();
+        }
     }
 }

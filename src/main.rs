@@ -1,7 +1,8 @@
 #[macro_use]
 extern crate diesel;
 
-use actix_web::{middleware::Logger, App, HttpServer};
+use actix_cors::Cors;
+use actix_web::{http, middleware::Logger, App, HttpServer};
 mod db;
 mod parser;
 mod renderer;
@@ -17,6 +18,12 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .data(pool.clone())
             .wrap(Logger::default())
+            .wrap(
+                Cors::new() // <- Construct CORS middleware builder
+                    //.allowed_origin("http://localhost:8000/")
+                    .max_age(3600)
+                    .finish(),
+            )
             .service(routes::index)
             .service(routes::articles::get_by_full_title)
             .service(routes::articles::create_article)

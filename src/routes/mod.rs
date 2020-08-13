@@ -1,5 +1,19 @@
 use actix_web::{get, HttpRequest, HttpResponse};
+use serde::{Deserialize, Serialize};
 pub mod articles;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Response {
+    status: String,
+    result: ResponseResult,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ResponseResult {
+    ArticleGet { full_title: String, html: String },
+    Hello,
+}
 
 #[get("/")]
 pub async fn index(_req: HttpRequest) -> HttpResponse {
