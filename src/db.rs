@@ -9,20 +9,20 @@ use models::*;
 use schema::articles::dsl::*;
 use std::env;
 
-pub type DbPool = r2d2::Pool<ConnectionManager<SqliteConnection>>;
+pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 pub fn create_connection_pool() -> DbPool {
     dotenv().ok();
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let manager = ConnectionManager::<SqliteConnection>::new(database_url);
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
     r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool.")
 }
 
 pub fn get_article_by_full_title(
-    conn: &SqliteConnection,
+    conn: &PgConnection,
     full_title: &str,
 ) -> Result<Option<Article>, diesel::result::Error> {
     let article = articles
@@ -33,7 +33,7 @@ pub fn get_article_by_full_title(
     Ok(article)
 }
 
-pub fn create_article(conn: &SqliteConnection, new_article: &NewArticle) -> Result<Article> {
+pub fn create_article(conn: &PgConnection, new_article: &NewArticle) -> Result<Article> {
     match get_article_by_full_title(conn, new_article.title)? {
         Some(_) => Err(anyhow!("Article {}  already exists", new_article.title)),
         None => {
