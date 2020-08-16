@@ -15,7 +15,7 @@ pub struct Article {
 
 #[derive(Insertable)]
 #[table_name = "articles"]
-pub struct NewArticle<'a> {
+struct NewArticle<'a> {
     pub title: &'a str,
     pub wikitext: &'a str,
     pub created_at: SystemTime,
@@ -34,15 +34,19 @@ pub fn get_article_by_full_title(
     Ok(article)
 }
 
-pub fn create_article(conn: &PgConnection, new_article: &NewArticle) -> Result<Article> {
-    match get_article_by_full_title(conn, new_article.title)? {
-        Some(_) => Err(anyhow!("Article {}  already exists", new_article.title)),
+pub fn create_article(conn: &PgConnection, title: &str, wikitext: &str) -> Result<Article> {
+    match get_article_by_full_title(conn, title)? {
+        Some(_) => Err(anyhow!("Article {} already exists", title)),
         None => {
-            diesel::insert_into(articles::table)
+            let new_article = NewArticle {
+                title: title,
+                wikitext: wikitext,
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
+            };
+            let article = diesel::insert_into(articles::table)
                 .values(new_article)
-                .execute(conn)?;
-            let article = get_article_by_full_title(conn, new_article.title)?
-                .expect("Failed to create article");
+                .get_result(conn)?;
             Ok(article)
         }
     }
@@ -57,13 +61,7 @@ mod tests {
     async fn test_create_article() {
         let conn = create_connection();
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
-            let new_article = NewArticle {
-                title: "test",
-                wikitext: "==test==",
-                created_at: SystemTime::now(),
-                updated_at: SystemTime::now(),
-            };
-            create_article(&conn, &new_article).expect("must succeed");
+            create_article(&conn, "test", "==test==").expect("must succeed");
             articles::table
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)

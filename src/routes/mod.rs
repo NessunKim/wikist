@@ -13,6 +13,7 @@ pub struct Response {
 #[serde(untagged)]
 pub enum ResponseResult {
     ArticleGet { full_title: String, html: String },
+    Auth { refresh_token: String },
     Hello,
 }
 

@@ -3,6 +3,7 @@ extern crate diesel;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
+mod auth;
 mod db;
 mod models;
 mod parser;

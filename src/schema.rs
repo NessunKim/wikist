@@ -11,9 +11,10 @@ table! {
 table! {
     authentications (id) {
         id -> Int4,
-        user_id -> Nullable<Int4>,
+        user_id -> Int4,
         provider -> Varchar,
         provider_user_id -> Varchar,
+        created_at -> Timestamp,
     }
 }
 

@@ -3,7 +3,6 @@ use crate::db;
 use crate::parser;
 use actix_web::{get, post, web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
@@ -49,26 +48,13 @@ pub async fn create_article(
     article: web::Json<ArticlePostData>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::article;
-    use article::NewArticle;
     let conn = pool.get().expect("couldn't get db connection from pool");
-    let now = SystemTime::now();
-
-    web::block(move || {
-        article::create_article(
-            &conn,
-            &NewArticle {
-                title: &article.full_title,
-                wikitext: &article.wikitext,
-                created_at: now,
-                updated_at: now,
-            },
-        )
-    })
-    .await
-    .map_err(|e| {
-        eprintln!("{}", e);
-        HttpResponse::InternalServerError().finish()
-    })?;
+    web::block(move || article::create_article(&conn, &article.full_title, &article.wikitext))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
     Ok(HttpResponse::Created().finish())
 }
 
