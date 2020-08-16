@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use dotenv::dotenv;
