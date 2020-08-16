@@ -2,17 +2,17 @@ use crate::auth;
 use crate::schema::{authentications, users};
 use anyhow::Result;
 use chrono::prelude::*;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
+use serde::Serialize;
 
 #[derive(Serialize, Queryable, Identifiable, Debug)]
 pub struct User {
     pub id: i32,
     pub username: String,
     pub email: String,
-    pub created_at: SystemTime,
-    pub updated_at: SystemTime,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Insertable)]
@@ -20,8 +20,8 @@ pub struct User {
 struct NewUser<'a> {
     pub username: &'a str,
     pub email: &'a str,
-    pub created_at: SystemTime,
-    pub updated_at: SystemTime,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Serialize, Associations, Queryable, Identifiable, Debug)]
@@ -31,7 +31,7 @@ pub struct Authentication {
     pub user_id: i32,
     pub provider: String,
     pub provider_user_id: String,
-    pub created_at: SystemTime,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Insertable)]
@@ -40,7 +40,7 @@ pub struct NewAuthentication<'a> {
     pub user_id: i32,
     pub provider: &'a str,
     pub provider_user_id: &'a str,
-    pub created_at: SystemTime,
+    pub created_at: NaiveDateTime,
 }
 
 pub enum UserFindResult {
@@ -56,7 +56,7 @@ impl User {
         provider: &str,
         provider_user_id: &str,
     ) -> Result<Authentication> {
-        let now = SystemTime::now();
+        let now = Utc::now().naive_utc();
         let new_auth = NewAuthentication {
             user_id: self.id,
             provider,
@@ -117,7 +117,7 @@ pub fn find_user(
 }
 
 pub fn create_user(conn: &PgConnection, email: &str, username: &str) -> Result<User> {
-    let now = SystemTime::now();
+    let now = Utc::now().naive_utc();
     let new_user = NewUser {
         email,
         username,
