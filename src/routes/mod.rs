@@ -12,8 +12,15 @@ pub struct Response {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ResponseResult {
-    ArticleGet { full_title: String, html: String },
-    Auth { refresh_token: String },
+    #[serde(rename_all = "camelCase")]
+    ArticleGet {
+        full_title: String,
+        html: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    Auth {
+        refresh_token: String,
+    },
     Hello,
 }
 

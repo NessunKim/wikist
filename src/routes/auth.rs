@@ -12,12 +12,6 @@ pub struct FbAuthRequest {
     user_id: String,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct FbAuthResponse {
-    refresh_token: String,
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 struct FbGraphResponse {
     id: String,
