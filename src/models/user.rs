@@ -72,8 +72,12 @@ impl User {
     pub fn issue_refresh_token(&self) -> String {
         use chrono::Duration;
         use jsonwebtoken::{encode, EncodingKey, Header};
-        let claims =
-            auth::RefreshTokenClaims::new(self.id, Utc::now(), Utc::now() + Duration::days(30));
+        let claims = auth::TokenClaims::new(
+            self.id,
+            Utc::now(),
+            Utc::now() + Duration::days(30),
+            "refresh",
+        );
 
         encode(
             &Header::default(),

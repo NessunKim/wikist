@@ -2,16 +2,17 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct AccessTokenClaims {
+pub struct TokenClaims {
     sub: i32,
     #[serde(with = "jwt_numeric_date")]
     iat: DateTime<Utc>,
     #[serde(with = "jwt_numeric_date")]
     exp: DateTime<Utc>,
+    t: String,
 }
 
-impl AccessTokenClaims {
-    pub fn new(sub: i32, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
+impl TokenClaims {
+    pub fn new(sub: i32, iat: DateTime<Utc>, exp: DateTime<Utc>, t: &str) -> Self {
         // normalize the timestamps by stripping of microseconds
         let iat = iat
             .date()
@@ -19,29 +20,12 @@ impl AccessTokenClaims {
         let exp = exp
             .date()
             .and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
-        Self { sub, iat, exp }
-    }
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct RefreshTokenClaims {
-    sub: i32,
-    #[serde(with = "jwt_numeric_date")]
-    iat: DateTime<Utc>,
-    #[serde(with = "jwt_numeric_date")]
-    exp: DateTime<Utc>,
-}
-
-impl RefreshTokenClaims {
-    pub fn new(sub: i32, iat: DateTime<Utc>, exp: DateTime<Utc>) -> Self {
-        // normalize the timestamps by stripping of microseconds
-        let iat = iat
-            .date()
-            .and_hms_milli(iat.hour(), iat.minute(), iat.second(), 0);
-        let exp = exp
-            .date()
-            .and_hms_milli(exp.hour(), exp.minute(), exp.second(), 0);
-        Self { sub, iat, exp }
+        Self {
+            sub,
+            iat,
+            exp,
+            t: t.to_owned(),
+        }
     }
 }
 
