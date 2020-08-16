@@ -47,3 +47,29 @@ pub fn create_article(conn: &PgConnection, new_article: &NewArticle) -> Result<A
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::create_connection;
+
+    #[actix_rt::test]
+    async fn test_create_article() {
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let new_article = NewArticle {
+                title: "test",
+                wikitext: "==test==",
+                created_at: SystemTime::now(),
+                updated_at: SystemTime::now(),
+            };
+            create_article(&conn, &new_article).expect("must succeed");
+            articles::table
+                .filter(articles::title.eq("test"))
+                .first::<Article>(&conn)
+                .expect("must exist");
+
+            Ok(())
+        });
+    }
+}

@@ -14,3 +14,10 @@ pub fn create_connection_pool() -> DbPool {
         .build(manager)
         .expect("Failed to create pool.")
 }
+
+#[cfg(test)]
+pub fn create_connection() -> PgConnection {
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+}
