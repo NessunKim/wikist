@@ -1,7 +1,7 @@
-use parse_wiki_text::Configuration;
-fn parse(wikitext: &str) {
-    let result = Configuration::default().parse(wikitext);
-    assert!(result.warnings.is_empty());
+use parse_wiki_text::{Configuration, Output};
+
+pub fn parse(wikitext: &str) -> Output {
+    Configuration::default().parse(wikitext)
 }
 
 #[cfg(test)]

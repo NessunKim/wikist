@@ -21,3 +21,4 @@ anyhow = { version = "1.0" }
 parse_wiki_text = "0.1.5"
 percent-encoding = "2.1"
 htmlescape = "0.3"
+reqwest = { version = "0.10", features = ["json"] }

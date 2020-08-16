@@ -9,6 +9,15 @@ table! {
 }
 
 table! {
+    authentications (id) {
+        id -> Int4,
+        user_id -> Nullable<Int4>,
+        provider -> Varchar,
+        provider_user_id -> Varchar,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         username -> Varchar,
@@ -18,7 +27,10 @@ table! {
     }
 }
 
+joinable!(authentications -> users (user_id));
+
 allow_tables_to_appear_in_same_query!(
     articles,
+    authentications,
     users,
 );

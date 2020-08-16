@@ -1,6 +1,7 @@
 use actix_web::{get, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 pub mod articles;
+pub mod auth;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Response {

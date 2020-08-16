@@ -1,5 +1,6 @@
 use super::{Response, ResponseResult};
 use crate::db;
+use crate::parser;
 use actix_web::{get, post, web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
@@ -9,17 +10,17 @@ pub async fn get_by_full_title(
     pool: web::Data<db::DbPool>,
     path: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
+    use crate::models::article;
     let full_title = path.0.clone();
     let conn = pool.get().expect("couldn't get db connection from pool");
-    let article = web::block(move || db::get_article_by_full_title(&conn, &full_title))
+    let article = web::block(move || article::get_article_by_full_title(&conn, &full_title))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
     if let Some(article) = article {
-        use parse_wiki_text::Configuration;
-        let result = Configuration::default().parse(&article.wikitext);
+        let result = parser::parse(&article.wikitext);
         let resp = Response {
             status: "OK".to_owned(),
             result: ResponseResult::ArticleGet {
@@ -47,12 +48,13 @@ pub async fn create_article(
     pool: web::Data<db::DbPool>,
     article: web::Json<ArticlePostData>,
 ) -> Result<HttpResponse, Error> {
-    use db::models::NewArticle;
+    use crate::models::article;
+    use article::NewArticle;
     let conn = pool.get().expect("couldn't get db connection from pool");
     let now = SystemTime::now();
 
     web::block(move || {
-        db::create_article(
+        article::create_article(
             &conn,
             &NewArticle {
                 title: &article.full_title,
