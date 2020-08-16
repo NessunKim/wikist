@@ -24,7 +24,7 @@ pub async fn auth_facebook(
     use reqwest::Url;
     let url = Url::parse(
         format!(
-            "https://graph.facebook.com/me?fields=id&access_token={}",
+            "https://graph.facebook.com/me?fields=id,name&access_token={}",
             fb_auth_request.access_token
         )
         .as_str(),
