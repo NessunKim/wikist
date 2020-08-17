@@ -2,7 +2,9 @@ use super::{Response, ResponseResult};
 use crate::db;
 use crate::parser;
 use actix_web::{get, post, web, Error, HttpResponse};
+use actix_web_validator::ValidatedJson;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
@@ -36,20 +38,22 @@ pub async fn get_by_full_title(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ArticlePostData {
+#[derive(Serialize, Deserialize, Validate, Debug)]
+pub struct ArticleCreateRequest {
+    #[validate(length(min = 1, max = 300))]
     full_title: String,
+    #[validate(length(min = 1, max = 1000000))]
     wikitext: String,
 }
 
 #[post("/articles")]
 pub async fn create_article(
     pool: web::Data<db::DbPool>,
-    article: web::Json<ArticlePostData>,
+    data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::article;
     let conn = pool.get().expect("couldn't get db connection from pool");
-    web::block(move || article::create_article(&conn, &article.full_title, &article.wikitext))
+    web::block(move || article::create_article(&conn, &data.full_title, &data.wikitext))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -64,11 +68,11 @@ mod tests {
     use actix_web::{test, App};
 
     #[actix_rt::test]
-    async fn test_post() {
+    async fn test_create_article() {
         let pool = db::create_connection_pool();
         let mut app =
             test::init_service(App::new().data(pool.clone()).service(create_article)).await;
-        let data = ArticlePostData {
+        let data = ArticleCreateRequest {
             full_title: "AA".to_string(),
             wikitext: "==AA==\nasdf".to_string(),
         };
@@ -78,6 +82,37 @@ mod tests {
             .to_request();
         let resp = test::call_service(&mut app, req).await;
         assert_eq!(resp.status().as_u16(), 201);
+    }
+
+    #[actix_rt::test]
+    async fn test_create_article_validation() {
+        let pool = db::create_connection_pool();
+        let mut app =
+            test::init_service(App::new().data(pool.clone()).service(create_article)).await;
+        {
+            let data = ArticleCreateRequest {
+                full_title: "".to_string(),
+                wikitext: "==AA==\nasdf".to_string(),
+            };
+            let req = test::TestRequest::post()
+                .set_json(&data)
+                .uri("/articles")
+                .to_request();
+            let resp = test::call_service(&mut app, req).await;
+            assert_eq!(resp.status().as_u16(), 400);
+        }
+        {
+            let data = ArticleCreateRequest {
+                full_title: "asdfsdf".to_string(),
+                wikitext: "".to_string(),
+            };
+            let req = test::TestRequest::post()
+                .set_json(&data)
+                .uri("/articles")
+                .to_request();
+            let resp = test::call_service(&mut app, req).await;
+            assert_eq!(resp.status().as_u16(), 400);
+        }
     }
 
     #[actix_rt::test]
@@ -102,7 +137,7 @@ mod tests {
                 .service(get_by_full_title),
         )
         .await;
-        let data = ArticlePostData {
+        let data = ArticleCreateRequest {
             full_title: "title".to_string(),
             wikitext: "==AA==\nasdf".to_string(),
         };

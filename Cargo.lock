@@ -285,6 +285,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-validator"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9785e0a9daf2060f9872d2030498faad89f66c5d7674a8ceb4aea2890aa50f4a"
+dependencies = [
+ "actix-http",
+ "actix-router",
+ "actix-web",
+ "bytes",
+ "derive_more",
+ "futures",
+ "futures-util",
+ "log",
+ "mime",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "validator",
+ "validator_derive",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -940,6 +962,12 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
+
+[[package]]
+name = "if_chain"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3360c7b59e5ffa2653671fb74b4741a5d343c03f331c0a4aeda42b5c2b0ec7d"
 
 [[package]]
 name = "indexmap"
@@ -1984,6 +2012,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "validator"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e60fadf92c22236de4028ceb0b8af50ed3430d41ad43d7a7d63b6bd1a8f47c38"
+dependencies = [
+ "idna",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url",
+]
+
+[[package]]
+name = "validator_derive"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d577dfb8ca9440a5c0b053d5a19b68f5c92ef57064bac87c8205c3f6072c20f"
+dependencies = [
+ "if_chain",
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
+ "validator",
+]
+
+[[package]]
 name = "vcpkg"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2103,6 +2161,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "actix-web-httpauth",
+ "actix-web-validator",
  "anyhow",
  "chrono",
  "diesel",
@@ -2117,6 +2176,8 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "validator",
+ "validator_derive",
 ]
 
 [[package]]

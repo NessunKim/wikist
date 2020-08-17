@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate validator_derive;
+extern crate validator;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
