@@ -1,11 +1,11 @@
 use super::{Response, ResponseResult};
 use crate::db;
-use actix_web::{get, post, web, Error, HttpResponse};
+use actix_web::{post, web, Error, HttpResponse};
 use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FbAuthRequest {
     access_token: String,
@@ -19,7 +19,7 @@ struct FbGraphResponse {
     email: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshRequest {
     refresh_token: String,
@@ -132,5 +132,52 @@ pub async fn auth_facebook(
         Ok(HttpResponse::Created().json(resp))
     } else {
         Ok(HttpResponse::Ok().json(resp))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{test, App};
+    use dotenv::dotenv;
+    use std::env;
+
+    #[actix_rt::test]
+    async fn test_auth_facebook() {
+        dotenv().ok();
+        let pool = db::create_connection_pool();
+        let fb_test_user_id = env::var("FB_TEST_USER_ID").expect("FB_TEST_USER_ID must be set");
+        let fb_test_user_access_token =
+            env::var("FB_TEST_USER_ACCESS_TOKEN").expect("FB_TEST_USER_ACCESS_TOKEN must be set");
+        let mut app = test::init_service(
+            App::new()
+                .data(pool.clone())
+                .service(auth_facebook)
+                .service(refresh),
+        )
+        .await;
+        let data = FbAuthRequest {
+            access_token: fb_test_user_access_token,
+            user_id: fb_test_user_id,
+        };
+        let req = test::TestRequest::post()
+            .set_json(&data)
+            .uri("/auth/facebook")
+            .to_request();
+        let result: Response = test::read_response_json(&mut app, req).await;
+        if let ResponseResult::Auth { refresh_token } = result.result {
+            let data = RefreshRequest { refresh_token };
+            let req = test::TestRequest::post()
+                .set_json(&data)
+                .uri("/auth/refresh")
+                .to_request();
+            let result: Response = test::read_response_json(&mut app, req).await;
+            match result.result {
+                ResponseResult::Refresh { .. } => return,
+                _ => panic!(),
+            };
+        } else {
+            panic!();
+        }
     }
 }
