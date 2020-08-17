@@ -1,6 +1,6 @@
 use super::{Response, ResponseResult};
 use crate::db;
-use actix_web::{post, web, Error, HttpResponse};
+use actix_web::{get, post, web, Error, HttpResponse};
 use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,47 @@ struct FbGraphResponse {
     id: String,
     name: String,
     email: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshRequest {
+    refresh_token: String,
+}
+
+#[post("/auth/refresh")]
+pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpResponse, Error> {
+    use crate::auth::TokenClaims;
+    use chrono::{Duration, Utc};
+    use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+    use std::env;
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    match decode::<TokenClaims>(
+        &refresh_request.refresh_token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default(),
+    ) {
+        Ok(token) => {
+            let claims = TokenClaims::new(
+                token.claims.sub,
+                Utc::now(),
+                Utc::now() + Duration::hours(1),
+                "access",
+            );
+            let access_token = encode(
+                &Header::default(),
+                &claims,
+                &EncodingKey::from_secret(secret.as_ref()),
+            )
+            .expect("JWT encoding failed");
+            let resp = Response {
+                status: "OK".to_owned(),
+                result: ResponseResult::Refresh { access_token },
+            };
+            Ok(HttpResponse::Ok().json(resp))
+        }
+        Err(_) => Ok(HttpResponse::Unauthorized().finish()),
+    }
 }
 
 #[post("/auth/facebook")]

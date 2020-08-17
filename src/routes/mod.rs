@@ -21,6 +21,10 @@ pub enum ResponseResult {
     Auth {
         refresh_token: String,
     },
+    #[serde(rename_all = "camelCase")]
+    Refresh {
+        access_token: String,
+    },
     Hello,
 }
 

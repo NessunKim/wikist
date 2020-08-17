@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct TokenClaims {
-    sub: i32,
+    pub sub: i32,
     #[serde(with = "jwt_numeric_date")]
     iat: DateTime<Utc>,
     #[serde(with = "jwt_numeric_date")]
