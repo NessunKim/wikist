@@ -30,6 +30,7 @@ pub async fn run() -> std::io::Result<()> {
             .service(routes::articles::get_by_full_title)
             .service(routes::articles::create_article)
             .service(routes::auth::auth_facebook)
+            .service(routes::auth::refresh)
     })
     .bind("127.0.0.1:8088")?
     .run()
