@@ -25,31 +25,36 @@ pub struct RefreshRequest {
     refresh_token: String,
 }
 
-#[post("/auth/refresh")]
-pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpResponse, Error> {
+fn token_refresh(refresh_token: &str) -> Result<String> {
     use crate::auth::TokenClaims;
     use chrono::{Duration, Utc};
     use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
     use std::env;
     let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    match decode::<TokenClaims>(
-        &refresh_request.refresh_token,
+    let token = decode::<TokenClaims>(
+        &refresh_token,
         &DecodingKey::from_secret(secret.as_ref()),
         &Validation::default(),
-    ) {
-        Ok(token) => {
-            let claims = TokenClaims::new(
-                token.claims.sub,
-                Utc::now(),
-                Utc::now() + Duration::hours(1),
-                "access",
-            );
-            let access_token = encode(
-                &Header::default(),
-                &claims,
-                &EncodingKey::from_secret(secret.as_ref()),
-            )
-            .expect("JWT encoding failed");
+    )?;
+    let claims = TokenClaims::new(
+        token.claims.sub,
+        Utc::now(),
+        Utc::now() + Duration::hours(1),
+        "access",
+    );
+    let access_token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_ref()),
+    )
+    .expect("JWT encoding failed");
+    Ok(access_token)
+}
+
+#[post("/auth/refresh")]
+pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpResponse, Error> {
+    match token_refresh(&refresh_request.refresh_token) {
+        Ok(access_token) => {
             let resp = Response {
                 status: "OK".to_owned(),
                 result: ResponseResult::Refresh { access_token },
@@ -124,9 +129,16 @@ pub async fn auth_facebook(
             eprintln!("{}", e);
             HttpResponse::Unauthorized().finish()
         })?;
+    let access_token = token_refresh(&refresh_token).map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::Unauthorized().finish()
+    })?;
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::Auth { refresh_token },
+        result: ResponseResult::Auth {
+            refresh_token,
+            access_token,
+        },
     };
     if is_new_user {
         Ok(HttpResponse::Created().json(resp))
@@ -165,7 +177,7 @@ mod tests {
             .uri("/auth/facebook")
             .to_request();
         let result: Response = test::read_response_json(&mut app, req).await;
-        if let ResponseResult::Auth { refresh_token } = result.result {
+        if let ResponseResult::Auth { refresh_token, .. } = result.result {
             let data = RefreshRequest { refresh_token };
             let req = test::TestRequest::post()
                 .set_json(&data)
