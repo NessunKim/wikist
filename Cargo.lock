@@ -153,9 +153,9 @@ dependencies = [
 
 [[package]]
 name = "actix-service"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3e4fc95dfa7e24171b2d0bb46b85f8ab0e8499e4e3caec691fc4ea65c287564"
+checksum = "0052435d581b5be835d11f4eb3bce417c8af18d87ddf8ace99f8e67e595882bb"
 dependencies = [
  "futures-util",
  "pin-project",
@@ -269,19 +269,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "actix-web-httpauth"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea25b3a3e113d04ae74bfbc3ba617f6254437dbd03576d9b479e8e8df894285"
-dependencies = [
- "actix-service",
- "actix-web",
- "base64 0.12.3",
- "bytes",
- "futures-util",
 ]
 
 [[package]]
@@ -2160,13 +2147,13 @@ dependencies = [
  "actix-cors",
  "actix-rt",
  "actix-web",
- "actix-web-httpauth",
  "actix-web-validator",
  "anyhow",
  "chrono",
  "diesel",
  "dotenv",
  "env_logger",
+ "futures",
  "htmlescape",
  "jsonwebtoken",
  "log",

@@ -8,6 +8,7 @@ use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
 mod auth;
 mod db;
+mod middlewares;
 mod models;
 mod parser;
 mod renderer;
@@ -21,7 +22,6 @@ pub async fn run() -> std::io::Result<()> {
     let pool = db::create_connection_pool();
     HttpServer::new(move || {
         App::new()
-            .data(pool.clone())
             .wrap(Logger::default())
             .wrap(
                 Cors::new() // <- Construct CORS middleware builder
@@ -29,6 +29,7 @@ pub async fn run() -> std::io::Result<()> {
                     .max_age(3600)
                     .finish(),
             )
+            .data(pool.clone())
             .service(routes::index)
             .service(routes::articles::get_by_full_title)
             .service(routes::articles::create_article)

@@ -1,3 +1,4 @@
+use anyhow::Result;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -52,4 +53,16 @@ mod jwt_numeric_date {
             .single() // If there are multiple or no valid DateTimes from timestamp, return None
             .ok_or_else(|| serde::de::Error::custom("invalid Unix timestamp value"))
     }
+}
+
+pub fn decode(token: &str) -> Result<jsonwebtoken::TokenData<TokenClaims>> {
+    use jsonwebtoken::{decode, DecodingKey, Validation};
+    use std::env;
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+    let result = decode::<TokenClaims>(
+        &token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default(),
+    )?;
+    Ok(result)
 }

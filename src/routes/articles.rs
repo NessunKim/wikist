@@ -1,5 +1,6 @@
 use super::{Response, ResponseResult};
 use crate::db;
+use crate::middlewares::auth::UserInfo;
 use crate::parser;
 use actix_web::{get, post, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
@@ -48,6 +49,7 @@ pub struct ArticleCreateRequest {
 
 #[post("/articles")]
 pub async fn create_article(
+    user_info: Option<UserInfo>,
     pool: web::Data<db::DbPool>,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {

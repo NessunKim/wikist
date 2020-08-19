@@ -26,16 +26,12 @@ pub struct RefreshRequest {
 }
 
 fn token_refresh(refresh_token: &str) -> Result<String> {
-    use crate::auth::TokenClaims;
+    use crate::auth::{decode, TokenClaims};
     use chrono::{Duration, Utc};
-    use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+    use jsonwebtoken::{encode, EncodingKey, Header};
     use std::env;
     let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
-    let token = decode::<TokenClaims>(
-        &refresh_token,
-        &DecodingKey::from_secret(secret.as_ref()),
-        &Validation::default(),
-    )?;
+    let token = decode(&refresh_token)?;
     let claims = TokenClaims::new(
         token.claims.sub,
         Utc::now(),
