@@ -4,6 +4,7 @@ use crate::middlewares::auth::UserInfo;
 use crate::parser;
 use actix_web::{get, post, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -12,31 +13,41 @@ pub async fn get_by_full_title(
     pool: web::Data<db::DbPool>,
     path: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::article;
+    use crate::models::article::get_article_by_full_title;
     let full_title = path.0.clone();
     let conn = pool.get().expect("couldn't get db connection from pool");
-    let article = web::block(move || article::get_article_by_full_title(&conn, &full_title))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
-    if let Some(article) = article {
-        let result = parser::parse(&article.wikitext);
-        let resp = Response {
-            status: "OK".to_owned(),
-            result: ResponseResult::ArticleGet {
-                full_title: article.title,
-                html: crate::renderer::render(&result),
-            },
-        };
-        Ok(HttpResponse::Ok().json(resp))
-    } else {
-        let full_title = path.0.clone();
-        let res = HttpResponse::NotFound()
-            .body(format!("No article found with full title: {}", &full_title));
-        Ok(res)
-    }
+    let article = match get_article_by_full_title(&conn, &full_title) {
+        Ok(Some(article)) => article,
+        Ok(None) => {
+            let full_title = path.0.clone();
+            return Ok(HttpResponse::NotFound()
+                .body(format!("No article found with full title: {}", &full_title)));
+        }
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let revision = match article.get_latest_revision(&conn) {
+        Ok(revision) => revision,
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let wikitext = match revision.get_wikitext(&conn) {
+        Ok(wikitext) => wikitext,
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let html = web::block(move || -> Result<String> {
+        let parsed = parser::parse(&wikitext);
+        let html = crate::renderer::render(&parsed);
+        Ok(html)
+    })
+    .await
+    .unwrap();
+    let resp = Response {
+        status: "OK".to_owned(),
+        result: ResponseResult::ArticleGet {
+            full_title: article.title,
+            html,
+        },
+    };
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 #[derive(Serialize, Deserialize, Validate, Debug)]

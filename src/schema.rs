@@ -1,8 +1,16 @@
 table! {
+    actors (id) {
+        id -> Int4,
+        user_id -> Nullable<Int4>,
+        ip_address -> Nullable<Cidr>,
+    }
+}
+
+table! {
     articles (id) {
         id -> Int4,
         title -> Varchar,
-        wikitext -> Text,
+        latest_revision_id -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -19,6 +27,23 @@ table! {
 }
 
 table! {
+    contents (id) {
+        id -> Int4,
+        wikitext -> Text,
+    }
+}
+
+table! {
+    revisions (id) {
+        id -> Int4,
+        article_id -> Int4,
+        actor_id -> Int4,
+        content_id -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         username -> Varchar,
@@ -28,10 +53,15 @@ table! {
     }
 }
 
-joinable!(authentications -> users (user_id));
+joinable!(revisions -> actors (actor_id));
+joinable!(revisions -> articles (article_id));
+joinable!(revisions -> contents (content_id));
 
 allow_tables_to_appear_in_same_query!(
+    actors,
     articles,
     authentications,
+    contents,
+    revisions,
     users,
 );
