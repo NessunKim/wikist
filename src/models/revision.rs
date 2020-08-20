@@ -43,7 +43,7 @@ impl Revision {
         article: &Article,
         actor: &Actor,
         wikitext: &str,
-    ) -> Result<Revision> {
+    ) -> Result<Self> {
         let now = Utc::now().naive_utc();
         let content = diesel::insert_into(contents::table)
             .values(NewContent { wikitext })

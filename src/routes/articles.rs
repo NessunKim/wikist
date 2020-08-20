@@ -2,10 +2,12 @@ use super::{Response, ResponseResult};
 use crate::db;
 use crate::middlewares::auth::UserInfo;
 use crate::parser;
-use actix_web::{get, post, web, Error, HttpResponse};
+use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::Result;
+use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use validator::Validate;
 
 #[get("/articles/{full_title}")]
@@ -60,13 +62,29 @@ pub struct ArticleCreateRequest {
 
 #[post("/articles")]
 pub async fn create_article(
+    req: HttpRequest,
     user_info: Option<UserInfo>,
     pool: web::Data<db::DbPool>,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::Article;
+    use crate::models::{Actor, Article};
+    let conn_info = req.connection_info();
+    let remote = conn_info.remote().unwrap();
+    let ip_address = IpNetwork::from_str(remote.split(':').collect::<Vec<&str>>()[0]).unwrap();
     let conn = pool.get().expect("couldn't get db connection from pool");
-    web::block(move || Article::create(&conn, &data.full_title, &data.wikitext))
+    let actor = match user_info {
+        Some(user_info) => {
+            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
+        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?,
+    };
+    web::block(move || Article::create(&conn, &data.full_title, &data.wikitext, &actor))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -90,6 +108,7 @@ mod tests {
             wikitext: "==AA==\nasdf".to_string(),
         };
         let req = test::TestRequest::post()
+            .peer_addr("127.0.0.1:22342".parse().unwrap())
             .set_json(&data)
             .uri("/articles")
             .to_request();
@@ -108,6 +127,7 @@ mod tests {
                 wikitext: "==AA==\nasdf".to_string(),
             };
             let req = test::TestRequest::post()
+                .peer_addr("127.0.0.1:22342".parse().unwrap())
                 .set_json(&data)
                 .uri("/articles")
                 .to_request();
@@ -120,6 +140,7 @@ mod tests {
                 wikitext: "".to_string(),
             };
             let req = test::TestRequest::post()
+                .peer_addr("127.0.0.1:22342".parse().unwrap())
                 .set_json(&data)
                 .uri("/articles")
                 .to_request();
@@ -134,6 +155,7 @@ mod tests {
         let mut app =
             test::init_service(App::new().data(pool.clone()).service(get_by_full_title)).await;
         let req = test::TestRequest::get()
+            .peer_addr("127.0.0.1:22342".parse().unwrap())
             .uri("/articles/non-existing")
             .to_request();
         let resp = test::call_service(&mut app, req).await;
@@ -155,6 +177,7 @@ mod tests {
             wikitext: "==AA==\nasdf".to_string(),
         };
         let req = test::TestRequest::post()
+            .peer_addr("127.0.0.1:22342".parse().unwrap())
             .set_json(&data)
             .uri("/articles")
             .to_request();

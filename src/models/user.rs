@@ -74,7 +74,7 @@ impl User {
         Ok(UserFindResult::NotExists)
     }
 
-    pub fn create(conn: &PgConnection, email: &str, username: &str) -> Result<User> {
+    pub fn create(conn: &PgConnection, email: &str, username: &str) -> Result<Self> {
         let now = Utc::now().naive_utc();
         let new_user = NewUser {
             email,
