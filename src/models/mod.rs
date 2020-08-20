@@ -4,5 +4,5 @@ mod revision;
 mod user;
 pub use actor::Actor;
 pub use article::Article;
-pub use revision::Revision;
+pub use revision::{NewRevision, Revision};
 pub use user::{User, UserFindResult};

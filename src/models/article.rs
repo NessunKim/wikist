@@ -1,4 +1,4 @@
-use crate::models::{Actor, Revision};
+use crate::models::{Actor, NewRevision, Revision};
 use crate::schema::articles;
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
@@ -37,10 +37,10 @@ impl Article {
                 created_at: now,
                 updated_at: now,
             };
-            let article = diesel::insert_into(articles::table)
+            let mut article = diesel::insert_into(articles::table)
                 .values(new_article)
                 .get_result::<Article>(conn)?;
-            let revision = Revision::create(conn, &article, actor, wikitext)?;
+            let revision = Revision::create(conn, &article, wikitext, actor)?;
             article.set_latest_revision(conn, &revision)?;
             Ok(article)
         })
@@ -55,9 +55,28 @@ impl Article {
             .optional()?;
         Ok(article)
     }
-    pub fn edit(&self, conn: &PgConnection, wikitext: &str, actor: &Actor) -> Result<Revision> {
+    pub fn add_null_revision(&mut self, conn: &PgConnection, actor: &Actor) -> Result<Revision> {
+        use crate::schema::revisions;
         conn.transaction(|| {
-            let revision = Revision::create(conn, self, actor, wikitext)?;
+            let now = Utc::now().naive_utc();
+            let content = self.get_latest_revision(conn)?.get_content(conn)?;
+            let new_revision = NewRevision {
+                article_id: self.id,
+                actor_id: actor.id,
+                content_id: content.id,
+                created_at: now,
+            };
+            let revision = diesel::insert_into(revisions::table)
+                .values(new_revision)
+                .get_result(conn)?;
+            self.set_latest_revision(conn, &revision)?;
+
+            Ok(revision)
+        })
+    }
+    pub fn edit(&mut self, conn: &PgConnection, wikitext: &str, actor: &Actor) -> Result<Revision> {
+        conn.transaction(|| {
+            let revision = Revision::create(conn, self, wikitext, actor)?;
             self.set_latest_revision(conn, &revision)?;
             Ok(revision)
         })
@@ -74,7 +93,50 @@ impl Article {
             Err(anyhow!("Cannot find latest revision"))
         }
     }
-    fn set_latest_revision(&self, conn: &PgConnection, revision: &Revision) -> Result<()> {
+    pub fn get_all_revision(&self, conn: &PgConnection) -> Result<Vec<Revision>> {
+        use crate::schema::revisions;
+        let revisions = Revision::belonging_to(self)
+            .order(revisions::id.asc())
+            .load::<Revision>(conn)?;
+        Ok(revisions)
+    }
+
+    /// Creates an `Article` and copies all `Revision`s to the new `Article`.
+    pub fn fork(&self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Self> {
+        use crate::schema::revisions;
+        conn.transaction(|| {
+            let now = Utc::now().naive_utc();
+            let new_article = NewArticle {
+                title: title,
+                latest_revision_id: -1,
+                created_at: now,
+                updated_at: now,
+            };
+            let mut article = diesel::insert_into(articles::table)
+                .values(new_article)
+                .get_result::<Article>(conn)?;
+            let revisions = self.get_all_revision(conn)?;
+            let new_revisions = revisions
+                .iter()
+                .map(|rev| NewRevision {
+                    article_id: article.id,
+                    actor_id: rev.actor_id,
+                    content_id: rev.content_id,
+                    created_at: rev.created_at,
+                })
+                .collect::<Vec<NewRevision>>();
+            let copied_revisions = diesel::insert_into(revisions::table)
+                .values(new_revisions)
+                .get_results::<Revision>(conn)?;
+            let latest_rev = &copied_revisions.last().unwrap();
+            article.set_latest_revision(conn, latest_rev)?;
+            article.add_null_revision(conn, actor)?;
+
+            Ok(article)
+        })
+    }
+
+    fn set_latest_revision(&mut self, conn: &PgConnection, revision: &Revision) -> Result<()> {
         let now = Utc::now().naive_utc();
         diesel::update(articles::table)
             .set((
@@ -82,6 +144,8 @@ impl Article {
                 articles::updated_at.eq(now),
             ))
             .execute(conn)?;
+        self.latest_revision_id = revision.id;
+        self.updated_at = now;
         Ok(())
     }
 }
@@ -117,7 +181,8 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let article = Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            let mut article =
+                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
             article
                 .edit(&conn, "==test-edit==", &actor)
                 .expect("must succeed");

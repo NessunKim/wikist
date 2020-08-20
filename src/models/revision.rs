@@ -18,7 +18,7 @@ pub struct Revision {
 
 #[derive(Insertable)]
 #[table_name = "revisions"]
-struct NewRevision {
+pub struct NewRevision {
     pub article_id: i32,
     pub actor_id: i32,
     pub content_id: i32,
@@ -41,8 +41,8 @@ impl Revision {
     pub fn create(
         conn: &PgConnection,
         article: &Article,
-        actor: &Actor,
         wikitext: &str,
+        actor: &Actor,
     ) -> Result<Self> {
         let now = Utc::now().naive_utc();
         let content = diesel::insert_into(contents::table)
@@ -59,10 +59,7 @@ impl Revision {
             .get_result(conn)?;
         Ok(revision)
     }
-    pub fn get_wikitext(self, conn: &PgConnection) -> Result<String> {
-        Ok(self.get_content(conn)?.wikitext)
-    }
-    fn get_content(self, conn: &PgConnection) -> Result<Content> {
+    pub fn get_content(self, conn: &PgConnection) -> Result<Content> {
         let content = contents::table
             .find(self.content_id)
             .first::<Content>(conn)
@@ -72,5 +69,8 @@ impl Revision {
         } else {
             Err(anyhow!("Cannot find content of the revision"))
         }
+    }
+    pub fn get_wikitext(self, conn: &PgConnection) -> Result<String> {
+        Ok(self.get_content(conn)?.wikitext)
     }
 }
