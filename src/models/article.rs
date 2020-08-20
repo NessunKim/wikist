@@ -67,7 +67,7 @@ impl Article {
             Err(anyhow!("Cannot find latest revision"))
         }
     }
-    pub fn set_latest_revision(&self, conn: &PgConnection, revision: &Revision) -> Result<()> {
+    fn set_latest_revision(&self, conn: &PgConnection, revision: &Revision) -> Result<()> {
         diesel::update(articles::table)
             .set(articles::latest_revision_id.eq(revision.id))
             .execute(conn)?;
