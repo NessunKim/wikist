@@ -55,6 +55,13 @@ impl Article {
             .optional()?;
         Ok(article)
     }
+    pub fn edit(&self, conn: &PgConnection, wikitext: &str, actor: &Actor) -> Result<Revision> {
+        conn.transaction(|| {
+            let revision = Revision::create(conn, self, actor, wikitext)?;
+            self.set_latest_revision(conn, &revision)?;
+            Ok(revision)
+        })
+    }
     pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<Revision> {
         use crate::schema::revisions;
         let latest = revisions::table
@@ -68,8 +75,12 @@ impl Article {
         }
     }
     fn set_latest_revision(&self, conn: &PgConnection, revision: &Revision) -> Result<()> {
+        let now = Utc::now().naive_utc();
         diesel::update(articles::table)
-            .set(articles::latest_revision_id.eq(revision.id))
+            .set((
+                articles::latest_revision_id.eq(revision.id),
+                articles::updated_at.eq(now),
+            ))
             .execute(conn)?;
         Ok(())
     }
@@ -93,6 +104,33 @@ mod tests {
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)
                 .expect("must exist");
+
+            Ok(())
+        });
+    }
+
+    #[actix_rt::test]
+    async fn test_edit_article() {
+        use ipnetwork::IpNetwork;
+        use std::str::FromStr;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
+            let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
+            let article = Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            article
+                .edit(&conn, "==test-edit==", &actor)
+                .expect("must succeed");
+            let article = articles::table
+                .filter(articles::title.eq("test"))
+                .first::<Article>(&conn)
+                .expect("must exist");
+            let wikitext = article
+                .get_latest_revision(&conn)
+                .expect("must exist")
+                .get_wikitext(&conn)
+                .expect("must succeed");
+            assert_eq!(wikitext, "==test-edit==");
 
             Ok(())
         });
