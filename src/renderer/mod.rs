@@ -1,4 +1,4 @@
-use crate::models::article::Article;
+use crate::models::Article;
 use htmlescape::encode_minimal;
 use parse_wiki_text::{Node, Output};
 use std::collections::VecDeque;

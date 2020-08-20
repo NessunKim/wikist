@@ -66,7 +66,7 @@ pub async fn auth_facebook(
     pool: web::Data<db::DbPool>,
     fb_auth_request: web::Json<FbAuthRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::user::{create_user, find_user, UserFindResult};
+    use crate::models::{User, UserFindResult};
     use anyhow::Error;
     use reqwest::Url;
     let url = Url::parse(
@@ -103,7 +103,7 @@ pub async fn auth_facebook(
     let mut is_new_user: bool = false;
     let refresh_token: String = conn
         .transaction::<_, Error, _>(|| {
-            let user_find_result = find_user(&conn, &email, "facebook", &fb_auth_request.user_id)?;
+            let user_find_result = User::find(&conn, &email, "facebook", &fb_auth_request.user_id)?;
             let refresh_token = match user_find_result {
                 UserFindResult::Exists(user) => {
                     is_new_user = false;
@@ -114,7 +114,7 @@ pub async fn auth_facebook(
                 }
                 UserFindResult::NotExists => {
                     is_new_user = true;
-                    let user = create_user(&conn, &email, &name)?;
+                    let user = User::create(&conn, &email, &name)?;
                     user.add_authentication(&conn, "facebook", &fb_auth_request.user_id)?;
                     user.issue_refresh_token()
                 }

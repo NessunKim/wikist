@@ -1,4 +1,4 @@
-use crate::models::revision;
+use crate::models::Revision;
 use crate::schema::articles;
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
@@ -24,11 +24,37 @@ struct NewArticle<'a> {
 }
 
 impl Article {
-    pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<revision::Revision> {
+    pub fn create(conn: &PgConnection, title: &str, wikitext: &str) -> Result<Article> {
+        if let Some(_) = Self::find_by_full_title(conn, title)? {
+            return Err(anyhow!("Article {} already exists", title));
+        }
+        let now = Utc::now().naive_utc();
+        let new_article = NewArticle {
+            title: title,
+            created_at: now,
+            updated_at: now,
+        };
+        let article = diesel::insert_into(articles::table)
+            .values(new_article)
+            .get_result::<Article>(conn)?;
+        let revision = Revision::create(conn, &article, actor, wikitext);
+        Ok(article)
+    }
+    pub fn find_by_full_title(
+        conn: &PgConnection,
+        full_title: &str,
+    ) -> Result<Option<Article>, diesel::result::Error> {
+        let article = articles::table
+            .filter(articles::title.eq(full_title))
+            .first::<Article>(conn)
+            .optional()?;
+        Ok(article)
+    }
+    pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<Revision> {
         use crate::schema::revisions;
         let latest = revisions::table
             .find(self.latest_revision_id)
-            .first::<revision::Revision>(conn)
+            .first::<Revision>(conn)
             .optional()?;
         if let Some(latest) = latest {
             Ok(latest)
@@ -36,36 +62,6 @@ impl Article {
             Err(anyhow!("Cannot find latest revision"))
         }
     }
-}
-
-pub fn get_article_by_full_title(
-    conn: &PgConnection,
-    full_title: &str,
-) -> Result<Option<Article>, diesel::result::Error> {
-    let article = articles::table
-        .filter(articles::title.eq(full_title))
-        .first::<Article>(conn)
-        .optional()?;
-
-    Ok(article)
-}
-
-pub fn create_article(conn: &PgConnection, title: &str, wikitext: &str) -> Result<Article> {
-    if let Some(_) = get_article_by_full_title(conn, title)? {
-        return Err(anyhow!("Article {} already exists", title));
-    }
-    let now = Utc::now().naive_utc();
-    let new_article = NewArticle {
-        title: title,
-        created_at: now,
-        updated_at: now,
-    };
-    let article = diesel::insert_into(articles::table)
-        .values(new_article)
-        .get_result::<Article>(conn)?;
-    let revision = revision::create_revision(conn, &article, actor, wikitext);
-
-    Ok(article)
 }
 
 #[cfg(test)]
@@ -77,7 +73,7 @@ mod tests {
     async fn test_create_article() {
         let conn = create_connection();
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
-            create_article(&conn, "test", "==test==").expect("must succeed");
+            Article::create(&conn, "test", "==test==").expect("must succeed");
             articles::table
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)

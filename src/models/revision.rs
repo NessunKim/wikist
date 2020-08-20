@@ -38,6 +38,30 @@ struct NewContent<'a> {
 }
 
 impl Revision {
+    pub fn create(
+        conn: &PgConnection,
+        article: &Article,
+        actor: &Actor,
+        wikitext: &str,
+    ) -> Result<Revision> {
+        let now = Utc::now().naive_utc();
+        let content = diesel::insert_into(contents::table)
+            .values(NewContent { wikitext })
+            .get_result::<Content>(conn)?;
+        let new_revision = NewRevision {
+            article_id: article.id,
+            actor_id: actor.id,
+            content_id: content.id,
+            created_at: now,
+        };
+        let revision = diesel::insert_into(revisions::table)
+            .values(new_revision)
+            .get_result(conn)?;
+        Ok(revision)
+    }
+    pub fn get_wikitext(self, conn: &PgConnection) -> Result<String> {
+        Ok(self.get_content(conn)?.wikitext)
+    }
     fn get_content(self, conn: &PgConnection) -> Result<Content> {
         let content = contents::table
             .find(self.content_id)
@@ -49,29 +73,4 @@ impl Revision {
             Err(anyhow!("Cannot find content of the revision"))
         }
     }
-    pub fn get_wikitext(self, conn: &PgConnection) -> Result<String> {
-        Ok(self.get_content(conn)?.wikitext)
-    }
-}
-
-pub fn create_revision(
-    conn: &PgConnection,
-    article: &Article,
-    actor: &Actor,
-    wikitext: &str,
-) -> Result<Revision> {
-    let now = Utc::now().naive_utc();
-    let content = diesel::insert_into(contents::table)
-        .values(NewContent { wikitext })
-        .get_result::<Content>(conn)?;
-    let new_revision = NewRevision {
-        article_id: article.id,
-        actor_id: actor.id,
-        content_id: content.id,
-        created_at: now,
-    };
-    let revision = diesel::insert_into(revisions::table)
-        .values(new_revision)
-        .get_result(conn)?;
-    Ok(revision)
 }

@@ -48,8 +48,46 @@ pub enum UserFindResult {
     WrongProvider(User), // Same email, but different provider
     NotExists,
 }
-
 impl User {
+    pub fn find(
+        conn: &PgConnection,
+        email: &str,
+        provider: &str,
+        provider_user_id: &str,
+    ) -> Result<UserFindResult> {
+        let auth = authentications::table
+            .filter(authentications::provider.eq(provider))
+            .filter(authentications::provider_user_id.eq(provider_user_id))
+            .first::<Authentication>(conn)
+            .optional()?;
+        if let Some(auth) = auth {
+            let user = auth.get_user(conn)?;
+            return Ok(UserFindResult::Exists(user));
+        }
+        let user_with_same_email = users::table
+            .filter(users::email.eq(email))
+            .first::<User>(conn)
+            .optional()?;
+        if let Some(user_with_same_email) = user_with_same_email {
+            return Ok(UserFindResult::WrongProvider(user_with_same_email));
+        }
+        Ok(UserFindResult::NotExists)
+    }
+
+    pub fn create(conn: &PgConnection, email: &str, username: &str) -> Result<User> {
+        let now = Utc::now().naive_utc();
+        let new_user = NewUser {
+            email,
+            username,
+            created_at: now,
+            updated_at: now,
+        };
+        let user = diesel::insert_into(users::table)
+            .values(new_user)
+            .get_result::<User>(conn)?;
+        Ok(user)
+    }
+
     pub fn add_authentication(
         &self,
         conn: &PgConnection,
@@ -95,43 +133,4 @@ impl Authentication {
         let user = users::table.find(self.user_id).get_result::<User>(conn)?;
         Ok(user)
     }
-}
-
-pub fn find_user(
-    conn: &PgConnection,
-    email: &str,
-    provider: &str,
-    provider_user_id: &str,
-) -> Result<UserFindResult> {
-    let auth = authentications::table
-        .filter(authentications::provider.eq(provider))
-        .filter(authentications::provider_user_id.eq(provider_user_id))
-        .first::<Authentication>(conn)
-        .optional()?;
-    if let Some(auth) = auth {
-        let user = auth.get_user(conn)?;
-        return Ok(UserFindResult::Exists(user));
-    }
-    let user_with_same_email = users::table
-        .filter(users::email.eq(email))
-        .first::<User>(conn)
-        .optional()?;
-    if let Some(user_with_same_email) = user_with_same_email {
-        return Ok(UserFindResult::WrongProvider(user_with_same_email));
-    }
-    Ok(UserFindResult::NotExists)
-}
-
-pub fn create_user(conn: &PgConnection, email: &str, username: &str) -> Result<User> {
-    let now = Utc::now().naive_utc();
-    let new_user = NewUser {
-        email,
-        username,
-        created_at: now,
-        updated_at: now,
-    };
-    let user = diesel::insert_into(users::table)
-        .values(new_user)
-        .get_result::<User>(conn)?;
-    Ok(user)
 }

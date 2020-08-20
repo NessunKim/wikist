@@ -13,10 +13,10 @@ pub async fn get_by_full_title(
     pool: web::Data<db::DbPool>,
     path: web::Path<(String,)>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::article::get_article_by_full_title;
+    use crate::models::Article;
     let full_title = path.0.clone();
     let conn = pool.get().expect("couldn't get db connection from pool");
-    let article = match get_article_by_full_title(&conn, &full_title) {
+    let article = match Article::find_by_full_title(&conn, &full_title) {
         Ok(Some(article)) => article,
         Ok(None) => {
             let full_title = path.0.clone();
@@ -64,9 +64,9 @@ pub async fn create_article(
     pool: web::Data<db::DbPool>,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::article;
+    use crate::models::Article;
     let conn = pool.get().expect("couldn't get db connection from pool");
-    web::block(move || article::create_article(&conn, &data.full_title, &data.wikitext))
+    web::block(move || Article::create(&conn, &data.full_title, &data.wikitext))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
