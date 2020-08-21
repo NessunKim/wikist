@@ -6,14 +6,14 @@ extern crate validator;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
-mod auth;
-mod db;
-mod middlewares;
-mod models;
-mod parser;
-mod renderer;
-mod routes;
-mod schema;
+pub mod auth;
+pub mod db;
+pub mod middlewares;
+pub mod models;
+pub mod parser;
+pub mod renderer;
+pub mod routes;
+pub mod schema;
 
 pub async fn run() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=info");
