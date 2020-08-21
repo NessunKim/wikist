@@ -11,6 +11,7 @@ pub struct Article {
     pub id: i32,
     pub title: String,
     pub latest_revision_id: i32,
+    pub is_active: bool,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -20,8 +21,6 @@ pub struct Article {
 struct NewArticle<'a> {
     pub title: &'a str,
     pub latest_revision_id: i32,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
 }
 
 impl Article {
@@ -29,13 +28,10 @@ impl Article {
         if let Some(_) = Self::find_by_full_title(conn, title)? {
             return Err(anyhow!("Article {} already exists", title));
         }
-        let now = Utc::now().naive_utc();
         conn.transaction(|| {
             let new_article = NewArticle {
                 title: title,
                 latest_revision_id: -1,
-                created_at: now,
-                updated_at: now,
             };
             let mut article = diesel::insert_into(articles::table)
                 .values(new_article)
@@ -105,12 +101,9 @@ impl Article {
     pub fn fork(&self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Self> {
         use crate::schema::revisions;
         conn.transaction(|| {
-            let now = Utc::now().naive_utc();
             let new_article = NewArticle {
                 title: title,
                 latest_revision_id: -1,
-                created_at: now,
-                updated_at: now,
             };
             let mut article = diesel::insert_into(articles::table)
                 .values(new_article)

@@ -11,6 +11,7 @@ table! {
         id -> Int4,
         title -> Varchar,
         latest_revision_id -> Int4,
+        is_active -> Bool,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
