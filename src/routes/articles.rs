@@ -1,5 +1,5 @@
 use super::{Response, ResponseResult};
-use crate::middlewares::{ConnectionInfo, DbConnection, UserInfo};
+use crate::extractors::{ConnectionInfo, DbConnection, UserInfo};
 use crate::parser;
 use actix_web::{get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;

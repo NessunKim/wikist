@@ -8,7 +8,7 @@ use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
 pub mod auth;
 pub mod db;
-pub mod middlewares;
+pub mod extractors;
 pub mod models;
 pub mod parser;
 pub mod renderer;

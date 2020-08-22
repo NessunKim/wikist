@@ -1,5 +1,5 @@
 use super::{Response, ResponseResult};
-use crate::middlewares::DbConnection;
+use crate::extractors::DbConnection;
 use actix_web::{post, web, Error, HttpResponse};
 use anyhow::{anyhow, Result};
 use diesel::prelude::*;
