@@ -71,6 +71,8 @@ impl Article {
             Ok(revision)
         })
     }
+
+    /// Create a new `Revision` for this `Article`.
     pub fn edit(&mut self, conn: &PgConnection, wikitext: &str, actor: &Actor) -> Result<Revision> {
         conn.transaction(|| {
             let revision = Revision::create(conn, self, wikitext, actor)?;
@@ -78,9 +80,21 @@ impl Article {
             Ok(revision)
         })
     }
+
+    /// Change the title.
+    ///
+    /// Creates a null revision.
+    pub fn rename(&mut self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Revision> {
+        conn.transaction(|| {
+            self.title = title.to_owned();
+            self.save_changes::<Self>(conn)?;
+            self.add_null_revision(conn, actor)
+        })
+    }
+
     /// Set is_active false.
     ///
-    /// Creates null revision.
+    /// Creates a null revision.
     pub fn delete(&mut self, conn: &PgConnection, actor: &Actor) -> Result<Revision> {
         conn.transaction(|| {
             self.is_active = false;
@@ -110,7 +124,7 @@ impl Article {
 
     /// Creates an `Article` and copies all `Revision`s to the new `Article`.
     ///
-    /// Creates null revision.
+    /// Creates a null revision.
     pub fn fork(&self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Self> {
         use crate::schema::revisions;
         conn.transaction(|| {

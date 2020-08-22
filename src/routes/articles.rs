@@ -190,6 +190,58 @@ pub async fn edit_article(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+#[derive(Serialize, Deserialize, Validate, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ArticleRenameRequest {
+    #[validate(length(min = 1, max = 1000000))]
+    full_title: String,
+}
+
+#[put("/articles/{full_title}/full-title")]
+pub async fn rename_article(
+    ConnectionInfo { ip_address }: ConnectionInfo,
+    user_info: Option<UserInfo>,
+    conn: DbConnection,
+    path: web::Path<(String,)>,
+    data: ValidatedJson<ArticleRenameRequest>,
+) -> Result<HttpResponse, Error> {
+    use crate::models::{Actor, Article};
+    let full_title = path.0.clone();
+    let actor = match user_info {
+        Some(user_info) => {
+            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
+        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?,
+    };
+    let mut article = match Article::find_by_full_title(&conn, &full_title) {
+        Ok(Some(article)) => article,
+        Ok(None) => {
+            let full_title = path.0.clone();
+            return Ok(HttpResponse::NotFound()
+                .body(format!("No article found with full title: {}", &full_title)));
+        }
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let revision = match article.rename(&conn, &data.full_title, &actor) {
+        Ok(revision) => revision,
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let resp = Response {
+        status: "OK".to_owned(),
+        result: ResponseResult::ArticleEdit {
+            full_title: article.title,
+            revision_id: revision.id,
+        },
+    };
+    Ok(HttpResponse::Ok().json(resp))
+}
+
 #[delete("/articles/{full_title}")]
 pub async fn delete_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
