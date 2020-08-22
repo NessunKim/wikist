@@ -1,5 +1,5 @@
 use super::{Response, ResponseResult};
-use crate::db;
+use crate::middlewares::DbConnection;
 use actix_web::{post, web, Error, HttpResponse};
 use anyhow::{anyhow, Result};
 use diesel::prelude::*;
@@ -63,7 +63,7 @@ pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpR
 
 #[post("/auth/facebook")]
 pub async fn auth_facebook(
-    pool: web::Data<db::DbPool>,
+    conn: DbConnection,
     fb_auth_request: web::Json<FbAuthRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{User, UserFindResult};
@@ -99,7 +99,6 @@ pub async fn auth_facebook(
         return Ok(HttpResponse::Unauthorized().finish());
     }
     let name = fb_resp.name;
-    let conn = pool.get().expect("couldn't get db connection from pool");
     let mut is_new_user: bool = false;
     let refresh_token: String = conn
         .transaction::<_, Error, _>(|| {
@@ -146,6 +145,7 @@ pub async fn auth_facebook(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db;
     use actix_web::{test, App};
     use dotenv::dotenv;
     use std::env;

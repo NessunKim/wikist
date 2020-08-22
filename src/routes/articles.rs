@@ -1,6 +1,5 @@
 use super::{Response, ResponseResult};
-use crate::db;
-use crate::middlewares::{ConnectionInfo, UserInfo};
+use crate::middlewares::{ConnectionInfo, DbConnection, UserInfo};
 use crate::parser;
 use actix_web::{get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
@@ -10,12 +9,11 @@ use validator::Validate;
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
-    pool: web::Data<db::DbPool>,
     path: web::Path<(String,)>,
+    conn: DbConnection,
 ) -> Result<HttpResponse, Error> {
     use crate::models::Article;
     let full_title = path.0.clone();
-    let conn = pool.get().expect("couldn't get db connection from pool");
     let article = match Article::find_by_full_title(&conn, &full_title) {
         Ok(Some(article)) => article,
         Ok(None) => {
@@ -62,11 +60,10 @@ pub struct ArticleCreateRequest {
 pub async fn create_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
-    pool: web::Data<db::DbPool>,
+    conn: DbConnection,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article};
-    let conn = pool.get().expect("couldn't get db connection from pool");
     let actor = match user_info {
         Some(user_info) => {
             Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
@@ -106,13 +103,12 @@ pub struct ArticleEditRequest {
 pub async fn edit_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
-    pool: web::Data<db::DbPool>,
+    conn: DbConnection,
     path: web::Path<(String,)>,
     data: ValidatedJson<ArticleEditRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article};
     let full_title = path.0.clone();
-    let conn = pool.get().expect("couldn't get db connection from pool");
     let actor = match user_info {
         Some(user_info) => {
             Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
@@ -151,6 +147,7 @@ pub async fn edit_article(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db;
     use actix_web::{test, App};
 
     #[actix_rt::test]
