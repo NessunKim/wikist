@@ -1,13 +1,11 @@
 use super::{Response, ResponseResult};
 use crate::db;
-use crate::middlewares::auth::UserInfo;
+use crate::middlewares::{ConnectionInfo, UserInfo};
 use crate::parser;
-use actix_web::{get, post, web, Error, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::Result;
-use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use validator::Validate;
 
 #[get("/articles/{full_title}")]
@@ -62,15 +60,12 @@ pub struct ArticleCreateRequest {
 
 #[post("/articles")]
 pub async fn create_article(
-    req: HttpRequest,
+    ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
     pool: web::Data<db::DbPool>,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article};
-    let conn_info = req.connection_info();
-    let remote = conn_info.remote().unwrap();
-    let ip_address = IpNetwork::from_str(remote.split(':').collect::<Vec<&str>>()[0]).unwrap();
     let conn = pool.get().expect("couldn't get db connection from pool");
     let actor = match user_info {
         Some(user_info) => {
