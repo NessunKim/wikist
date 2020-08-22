@@ -18,6 +18,16 @@ pub enum ResponseResult {
         html: String,
     },
     #[serde(rename_all = "camelCase")]
+    ArticleCreate {
+        full_title: String,
+        revision_id: i32,
+    },
+    #[serde(rename_all = "camelCase")]
+    ArticleEdit {
+        full_title: String,
+        revision_id: i32,
+    },
+    #[serde(rename_all = "camelCase")]
     Auth {
         refresh_token: String,
         access_token: String,

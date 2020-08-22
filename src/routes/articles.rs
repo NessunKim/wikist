@@ -2,7 +2,7 @@ use super::{Response, ResponseResult};
 use crate::db;
 use crate::middlewares::{ConnectionInfo, UserInfo};
 use crate::parser;
-use actix_web::{get, post, web, Error, HttpResponse};
+use actix_web::{get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -79,13 +79,73 @@ pub async fn create_article(
             HttpResponse::InternalServerError().finish()
         })?,
     };
-    web::block(move || Article::create(&conn, &data.full_title, &data.wikitext, &actor))
-        .await
-        .map_err(|e| {
+    let article =
+        web::block(move || Article::create(&conn, &data.full_title, &data.wikitext, &actor))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+    let resp = Response {
+        status: "OK".to_owned(),
+        result: ResponseResult::ArticleCreate {
+            full_title: article.title,
+            revision_id: article.latest_revision_id,
+        },
+    };
+    Ok(HttpResponse::Created().json(resp))
+}
+
+#[derive(Serialize, Deserialize, Validate, Debug)]
+pub struct ArticleEditRequest {
+    #[validate(length(min = 1, max = 1000000))]
+    wikitext: String,
+}
+
+#[put("/articles/{full_title}")]
+pub async fn edit_article(
+    ConnectionInfo { ip_address }: ConnectionInfo,
+    user_info: Option<UserInfo>,
+    pool: web::Data<db::DbPool>,
+    path: web::Path<(String,)>,
+    data: ValidatedJson<ArticleEditRequest>,
+) -> Result<HttpResponse, Error> {
+    use crate::models::{Actor, Article};
+    let full_title = path.0.clone();
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    let actor = match user_info {
+        Some(user_info) => {
+            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
+        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
-        })?;
-    Ok(HttpResponse::Created().finish())
+        })?,
+    };
+    let mut article = match Article::find_by_full_title(&conn, &full_title) {
+        Ok(Some(article)) => article,
+        Ok(None) => {
+            let full_title = path.0.clone();
+            return Ok(HttpResponse::NotFound()
+                .body(format!("No article found with full title: {}", &full_title)));
+        }
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let revision = match article.edit(&conn, &data.wikitext, &actor) {
+        Ok(revision) => revision,
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let resp = Response {
+        status: "OK".to_owned(),
+        result: ResponseResult::ArticleEdit {
+            full_title: article.title,
+            revision_id: revision.id,
+        },
+    };
+    Ok(HttpResponse::Ok().json(resp))
 }
 
 #[cfg(test)]
