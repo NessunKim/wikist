@@ -1,4 +1,4 @@
-use super::{Response, ResponseResult};
+use super::Response;
 use crate::extractors::{ConnectionInfo, DbConnection, Query, UserInfo};
 use crate::parser;
 use actix_web::{delete, get, post, put, web, Error, HttpResponse};
@@ -95,11 +95,19 @@ pub async fn get_article(
 }
 
 #[derive(Serialize, Deserialize, Validate, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ArticleCreateRequest {
     #[validate(length(min = 1, max = 300))]
     full_title: String,
     #[validate(length(min = 1, max = 1000000))]
     wikitext: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ArticleCreateResponse {
+    full_title: String,
+    revision_id: i32,
 }
 
 #[post("/articles")]
@@ -131,7 +139,7 @@ pub async fn create_article(
             })?;
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::ArticleCreate {
+        result: ArticleCreateResponse {
             full_title: article.title,
             revision_id: article.latest_revision_id,
         },
@@ -140,10 +148,13 @@ pub async fn create_article(
 }
 
 #[derive(Serialize, Deserialize, Validate, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ArticleEditRequest {
     #[validate(length(min = 1, max = 1000000))]
     wikitext: String,
 }
+
+pub type ArticleEditResponse = ArticleCreateResponse;
 
 #[put("/articles/{full_title}")]
 pub async fn edit_article(
@@ -182,7 +193,7 @@ pub async fn edit_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::ArticleEdit {
+        result: ArticleEditResponse {
             full_title: article.title,
             revision_id: revision.id,
         },
@@ -196,6 +207,8 @@ pub struct ArticleRenameRequest {
     #[validate(length(min = 1, max = 1000000))]
     full_title: String,
 }
+
+pub type ArticleRenameResponse = ArticleCreateResponse;
 
 #[put("/articles/{full_title}/full-title")]
 pub async fn rename_article(
@@ -234,13 +247,15 @@ pub async fn rename_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::ArticleEdit {
+        result: ArticleRenameResponse {
             full_title: article.title,
             revision_id: revision.id,
         },
     };
     Ok(HttpResponse::Ok().json(resp))
 }
+
+pub type ArticleDeleteResponse = ArticleCreateResponse;
 
 #[delete("/articles/{full_title}")]
 pub async fn delete_article(
@@ -278,7 +293,7 @@ pub async fn delete_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::ArticleDelete {
+        result: ArticleDeleteResponse {
             full_title: article.title,
             revision_id: revision.id,
         },

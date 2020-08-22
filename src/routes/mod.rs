@@ -9,27 +9,6 @@ pub struct Response<T> {
     result: T,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum ResponseResult {
-    #[serde(rename_all = "camelCase")]
-    ArticleCreate {
-        full_title: String,
-        revision_id: i32,
-    },
-    #[serde(rename_all = "camelCase")]
-    ArticleEdit {
-        full_title: String,
-        revision_id: i32,
-    },
-    #[serde(rename_all = "camelCase")]
-    ArticleDelete {
-        full_title: String,
-        revision_id: i32,
-    },
-    Hello,
-}
-
 #[get("/")]
 pub async fn index(_req: HttpRequest) -> HttpResponse {
     HttpResponse::Ok().body("Hello!")
