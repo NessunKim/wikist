@@ -47,6 +47,7 @@ impl Article {
     ) -> Result<Option<Self>, diesel::result::Error> {
         let article = articles::table
             .filter(articles::title.eq(full_title))
+            .filter(articles::is_active.eq(true))
             .first::<Article>(conn)
             .optional()?;
         Ok(article)
@@ -197,6 +198,24 @@ mod tests {
                 .expect("must succeed");
             assert_eq!(wikitext, "==test-edit==");
 
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_delete_article() {
+        use ipnetwork::IpNetwork;
+        use std::str::FromStr;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
+            let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
+            let mut article =
+                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            article.delete(&conn, &actor).expect("must succeed");
+            assert_eq!(article.is_active, false);
+            let article = Article::find_by_full_title(&conn, "test").expect("must succeed");
+            assert_eq!(article.is_none(), true);
             Ok(())
         });
     }
