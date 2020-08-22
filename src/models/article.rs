@@ -217,6 +217,34 @@ mod tests {
     }
 
     #[test]
+    fn test_rename_article() {
+        use ipnetwork::IpNetwork;
+        use std::str::FromStr;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
+            let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
+            let mut article =
+                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            article
+                .rename(&conn, "test2", &actor)
+                .expect("must succeed");
+            let article = articles::table
+                .filter(articles::title.eq("test2"))
+                .first::<Article>(&conn)
+                .expect("must exist");
+            let wikitext = article
+                .get_latest_revision(&conn)
+                .expect("must exist")
+                .get_wikitext(&conn)
+                .expect("must succeed");
+            assert_eq!(wikitext, "==test==");
+
+            Ok(())
+        });
+    }
+
+    #[test]
     fn test_delete_article() {
         use ipnetwork::IpNetwork;
         use std::str::FromStr;
