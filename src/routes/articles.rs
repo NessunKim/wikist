@@ -41,7 +41,7 @@ pub struct ArticleGetResponse {
 }
 
 #[get("/articles/{full_title}")]
-pub async fn get_by_full_title(
+pub async fn get_article(
     path: web::Path<(String,)>,
     query: Option<Query<ArticleGetQuery>>,
     conn: DbConnection,
@@ -292,10 +292,9 @@ mod tests {
     }
 
     #[actix_rt::test]
-    async fn test_get_by_full_title_non_existing() {
+    async fn test_get_article_non_existing() {
         let pool = db::create_connection_pool();
-        let mut app =
-            test::init_service(App::new().data(pool.clone()).service(get_by_full_title)).await;
+        let mut app = test::init_service(App::new().data(pool.clone()).service(get_article)).await;
         let req = test::TestRequest::get()
             .peer_addr("127.0.0.1:22342".parse().unwrap())
             .uri("/articles/non-existing")
@@ -311,7 +310,7 @@ mod tests {
             App::new()
                 .data(pool.clone())
                 .service(create_article)
-                .service(get_by_full_title),
+                .service(get_article),
         )
         .await;
         let data = ArticleCreateRequest {
