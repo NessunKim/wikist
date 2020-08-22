@@ -13,6 +13,8 @@ use validator::Validate;
 pub enum ArticleGetQueryFields {
     Html,
     Wikitext,
+    #[serde(other)]
+    _Other,
 }
 
 #[derive(Deserialize)]
@@ -32,9 +34,9 @@ impl Default for ArticleGetQuery {
 #[serde(rename_all = "camelCase")]
 pub struct ArticleGetResponse {
     full_title: String,
-    // #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     html: Option<String>,
-    // #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     wikitext: Option<String>,
 }
 
