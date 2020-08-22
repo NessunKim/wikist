@@ -9,7 +9,7 @@ pub struct ConnectionInfo {
 
 impl FromRequest for ConnectionInfo {
     type Error = Error;
-    type Future = Ready<Result<ConnectionInfo, Error>>;
+    type Future = Ready<Result<Self, Error>>;
     type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {

@@ -21,7 +21,7 @@ impl Deref for DbConnection {
 
 impl FromRequest for DbConnection {
     type Error = Error;
-    type Future = Ready<Result<DbConnection, Error>>;
+    type Future = Ready<Result<Self, Error>>;
     type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {

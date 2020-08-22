@@ -4,19 +4,14 @@ pub mod articles;
 pub mod auth;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Response {
+pub struct Response<T> {
     status: String,
-    result: ResponseResult,
+    result: T,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum ResponseResult {
-    #[serde(rename_all = "camelCase")]
-    ArticleGet {
-        full_title: String,
-        html: String,
-    },
     #[serde(rename_all = "camelCase")]
     ArticleCreate {
         full_title: String,
@@ -31,15 +26,6 @@ pub enum ResponseResult {
     ArticleDelete {
         full_title: String,
         revision_id: i32,
-    },
-    #[serde(rename_all = "camelCase")]
-    Auth {
-        refresh_token: String,
-        access_token: String,
-    },
-    #[serde(rename_all = "camelCase")]
-    Refresh {
-        access_token: String,
     },
     Hello,
 }

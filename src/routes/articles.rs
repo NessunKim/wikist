@@ -1,18 +1,51 @@
 use super::{Response, ResponseResult};
-use crate::extractors::{ConnectionInfo, DbConnection, UserInfo};
+use crate::extractors::{ConnectionInfo, DbConnection, Query, UserInfo};
 use crate::parser;
 use actix_web::{delete, get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use validator::Validate;
+
+#[derive(Deserialize, Hash, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum ArticleGetQueryFields {
+    Html,
+    Wikitext,
+}
+
+#[derive(Deserialize)]
+pub struct ArticleGetQuery {
+    pub fields: HashSet<ArticleGetQueryFields>,
+}
+
+impl Default for ArticleGetQuery {
+    fn default() -> Self {
+        Self {
+            fields: HashSet::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ArticleGetResponse {
+    full_title: String,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    html: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    wikitext: Option<String>,
+}
 
 #[get("/articles/{full_title}")]
 pub async fn get_by_full_title(
     path: web::Path<(String,)>,
+    query: Option<Query<ArticleGetQuery>>,
     conn: DbConnection,
 ) -> Result<HttpResponse, Error> {
     use crate::models::Article;
+    let ArticleGetQuery { fields } = &*query.unwrap_or_default();
     let full_title = path.0.clone();
     let article = match Article::find_by_full_title(&conn, &full_title) {
         Ok(Some(article)) => article,
@@ -31,18 +64,29 @@ pub async fn get_by_full_title(
         Ok(wikitext) => wikitext,
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
-    let html = web::block(move || -> Result<String> {
-        let parsed = parser::parse(&wikitext);
-        let html = crate::renderer::render(&parsed);
-        Ok(html)
-    })
-    .await
-    .unwrap();
+    let html = if fields.contains(&ArticleGetQueryFields::Html) {
+        let wikitext = wikitext.clone();
+        let html = web::block(move || -> Result<String> {
+            let parsed = parser::parse(&wikitext);
+            let html = crate::renderer::render(&parsed);
+            Ok(html)
+        })
+        .await
+        .unwrap();
+        Some(html)
+    } else {
+        None
+    };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::ArticleGet {
+        result: ArticleGetResponse {
             full_title: article.title,
             html,
+            wikitext: if fields.contains(&ArticleGetQueryFields::Wikitext) {
+                Some(wikitext)
+            } else {
+                None
+            },
         },
     };
     Ok(HttpResponse::Ok().json(resp))
@@ -278,15 +322,19 @@ mod tests {
             .uri("/articles")
             .to_request();
         test::call_service(&mut app, req).await;
-        let req = test::TestRequest::get().uri("/articles/title").to_request();
-        let result: Response = test::read_response_json(&mut app, req).await;
-        println!("{:#?}", result);
+        let req = test::TestRequest::get()
+            .uri("/articles/title?fields[]=html")
+            .to_request();
+        let result: Response<ArticleGetResponse> = test::read_response_json(&mut app, req).await;
+        dbg!(&result);
         assert_eq!(result.status, "OK");
-        if let ResponseResult::ArticleGet { full_title, html } = result.result {
-            assert_eq!(full_title, "title");
-            assert_eq!(html, "<h2>AA</h2>\n<p>asdf</p>");
-        } else {
-            panic!();
-        }
+        let ArticleGetResponse {
+            full_title,
+            html,
+            wikitext,
+        } = result.result;
+        assert_eq!(full_title, "title");
+        assert_eq!(html, Some("<h2>AA</h2>\n<p>asdf</p>".to_owned()));
+        assert_eq!(wikitext.is_none(), true);
     }
 }

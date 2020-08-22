@@ -8,7 +8,7 @@ pub struct UserInfo {
 
 impl FromRequest for UserInfo {
     type Error = Error;
-    type Future = Ready<Result<UserInfo, Error>>;
+    type Future = Ready<Result<Self, Error>>;
     type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {

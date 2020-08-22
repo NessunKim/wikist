@@ -1,4 +1,4 @@
-use super::{Response, ResponseResult};
+use super::Response;
 use crate::extractors::DbConnection;
 use actix_web::{post, web, Error, HttpResponse};
 use anyhow::{anyhow, Result};
@@ -17,12 +17,6 @@ struct FbGraphResponse {
     id: String,
     name: String,
     email: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct RefreshRequest {
-    refresh_token: String,
 }
 
 fn token_refresh(refresh_token: &str) -> Result<String> {
@@ -47,18 +41,37 @@ fn token_refresh(refresh_token: &str) -> Result<String> {
     Ok(access_token)
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshRequest {
+    refresh_token: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct RefreshResponse {
+    access_token: String,
+}
+
 #[post("/auth/refresh")]
 pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpResponse, Error> {
     match token_refresh(&refresh_request.refresh_token) {
         Ok(access_token) => {
             let resp = Response {
                 status: "OK".to_owned(),
-                result: ResponseResult::Refresh { access_token },
+                result: RefreshResponse { access_token },
             };
             Ok(HttpResponse::Ok().json(resp))
         }
         Err(_) => Ok(HttpResponse::Unauthorized().finish()),
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct AuthResponse {
+    refresh_token: String,
+    access_token: String,
 }
 
 #[post("/auth/facebook")]
@@ -130,7 +143,7 @@ pub async fn auth_facebook(
     })?;
     let resp = Response {
         status: "OK".to_owned(),
-        result: ResponseResult::Auth {
+        result: AuthResponse {
             refresh_token,
             access_token,
         },
@@ -172,20 +185,14 @@ mod tests {
             .set_json(&data)
             .uri("/auth/facebook")
             .to_request();
-        let result: Response = test::read_response_json(&mut app, req).await;
-        if let ResponseResult::Auth { refresh_token, .. } = result.result {
-            let data = RefreshRequest { refresh_token };
-            let req = test::TestRequest::post()
-                .set_json(&data)
-                .uri("/auth/refresh")
-                .to_request();
-            let result: Response = test::read_response_json(&mut app, req).await;
-            match result.result {
-                ResponseResult::Refresh { .. } => return,
-                _ => panic!(),
-            };
-        } else {
-            panic!();
-        }
+        let result: Response<AuthResponse> = test::read_response_json(&mut app, req).await;
+        let AuthResponse { refresh_token, .. } = result.result;
+        let data = RefreshRequest { refresh_token };
+        let req = test::TestRequest::post()
+            .set_json(&data)
+            .uri("/auth/refresh")
+            .to_request();
+        let result: Response<RefreshResponse> = test::read_response_json(&mut app, req).await;
+        assert_eq!(result.status, "OK");
     }
 }
