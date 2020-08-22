@@ -28,6 +28,11 @@ pub enum ResponseResult {
         revision_id: i32,
     },
     #[serde(rename_all = "camelCase")]
+    ArticleDelete {
+        full_title: String,
+        revision_id: i32,
+    },
+    #[serde(rename_all = "camelCase")]
     Auth {
         refresh_token: String,
         access_token: String,
