@@ -6,7 +6,7 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Serialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Queryable, Identifiable, AsChangeset, Debug)]
 pub struct Article {
     pub id: i32,
     pub title: String,
@@ -77,6 +77,16 @@ impl Article {
             Ok(revision)
         })
     }
+    /// Set is_active false.
+    ///
+    /// Creates null revision.
+    pub fn delete(&mut self, conn: &PgConnection, actor: &Actor) -> Result<Revision> {
+        conn.transaction(|| {
+            self.is_active = false;
+            self.save_changes::<Self>(conn)?;
+            self.add_null_revision(conn, actor)
+        })
+    }
     pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<Revision> {
         use crate::schema::revisions;
         let latest = revisions::table
@@ -98,6 +108,8 @@ impl Article {
     }
 
     /// Creates an `Article` and copies all `Revision`s to the new `Article`.
+    ///
+    /// Creates null revision.
     pub fn fork(&self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Self> {
         use crate::schema::revisions;
         conn.transaction(|| {
@@ -131,14 +143,9 @@ impl Article {
 
     fn set_latest_revision(&mut self, conn: &PgConnection, revision: &Revision) -> Result<()> {
         let now = Utc::now().naive_utc();
-        diesel::update(articles::table)
-            .set((
-                articles::latest_revision_id.eq(revision.id),
-                articles::updated_at.eq(now),
-            ))
-            .execute(conn)?;
         self.latest_revision_id = revision.id;
         self.updated_at = now;
+        self.save_changes::<Self>(conn)?;
         Ok(())
     }
 }
@@ -148,8 +155,8 @@ mod tests {
     use super::*;
     use crate::db::create_connection;
 
-    #[actix_rt::test]
-    async fn test_create_article() {
+    #[test]
+    fn test_create_article() {
         use ipnetwork::IpNetwork;
         use std::str::FromStr;
         let conn = create_connection();
@@ -166,8 +173,8 @@ mod tests {
         });
     }
 
-    #[actix_rt::test]
-    async fn test_edit_article() {
+    #[test]
+    fn test_edit_article() {
         use ipnetwork::IpNetwork;
         use std::str::FromStr;
         let conn = create_connection();

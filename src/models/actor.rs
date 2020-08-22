@@ -82,8 +82,8 @@ mod tests {
     use super::*;
     use crate::db::create_connection;
 
-    #[actix_rt::test]
-    async fn test_find_or_create_from_ip_race_condition_1() {
+    #[test]
+    fn test_find_or_create_from_ip_race_condition_1() {
         use ipnetwork::IpNetwork;
         use std::str::FromStr;
         let conn = create_connection();
@@ -94,8 +94,8 @@ mod tests {
         .expect("must succeed");
     }
 
-    #[actix_rt::test]
-    async fn test_find_or_create_from_ip_race_condition_2() {
+    #[test]
+    fn test_find_or_create_from_ip_race_condition_2() {
         use ipnetwork::IpNetwork;
         use std::str::FromStr;
         let conn = create_connection();
