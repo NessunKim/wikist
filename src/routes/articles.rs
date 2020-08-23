@@ -110,6 +110,7 @@ pub struct ArticleRevisionEntity {
     id: i32,
     created_at: NaiveDateTime,
     actor: ActorEntity,
+    comment: String,
 }
 
 pub type ArticleRevisionsGetResponse = Vec<ArticleRevisionEntity>;
@@ -147,6 +148,7 @@ pub async fn get_revisions(
                     actor: ActorEntity::User {
                         username: actor.get_user(&conn)?.username,
                     },
+                    comment: rev.comment.clone(),
                 }),
                 Actor {
                     ip_address: Some(ip_address),
@@ -157,6 +159,7 @@ pub async fn get_revisions(
                     actor: ActorEntity::Anonymous {
                         ip_address: ip_address.ip().to_string(),
                     },
+                    comment: rev.comment.clone(),
                 }),
                 _ => Err(anyhow!("Both user_id and ip_address are null.")),
             }
@@ -178,9 +181,9 @@ pub async fn get_revisions(
 pub struct ArticleCreateRequest {
     #[validate(length(min = 1, max = 300))]
     full_title: String,
-    #[validate(length(min = 1, max = 1000000))]
+    #[validate(length(min = 0, max = 1000000))]
     wikitext: String,
-    #[validate(length(min = 1, max = 1000))]
+    #[validate(length(min = 0, max = 1000))]
     comment: String,
 }
 
@@ -238,9 +241,9 @@ pub async fn create_article(
 #[derive(Serialize, Deserialize, Validate, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ArticleEditRequest {
-    #[validate(length(min = 1, max = 1000000))]
+    #[validate(length(min = 0, max = 1000000))]
     wikitext: String,
-    #[validate(length(min = 1, max = 1000))]
+    #[validate(length(min = 0, max = 1000))]
     comment: String,
 }
 
@@ -296,7 +299,7 @@ pub async fn edit_article(
 pub struct ArticleRenameRequest {
     #[validate(length(min = 1, max = 300))]
     full_title: String,
-    #[validate(length(min = 1, max = 1000))]
+    #[validate(length(min = 0, max = 1000))]
     comment: String,
 }
 
@@ -350,7 +353,7 @@ pub async fn rename_article(
 #[derive(Serialize, Deserialize, Validate, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ArticleDeleteRequest {
-    #[validate(length(min = 1, max = 1000))]
+    #[validate(length(min = 0, max = 1000))]
     comment: String,
 }
 
