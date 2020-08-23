@@ -1,6 +1,6 @@
-use crate::models::{actor::Actor, article::Article};
-use crate::schema::{contents, revisions};
-use anyhow::{anyhow, Result};
+use crate::models::{Actor, Article};
+use crate::schema::{actors, contents, revisions};
+use anyhow::Result;
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -8,6 +8,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Queryable, Identifiable, Associations, Debug)]
 #[belongs_to(Article)]
+#[belongs_to(Actor)]
 pub struct Revision {
     pub id: i32,
     pub article_id: i32,
@@ -59,18 +60,17 @@ impl Revision {
             .get_result(conn)?;
         Ok(revision)
     }
-    pub fn get_content(self, conn: &PgConnection) -> Result<Content> {
+    pub fn get_content(&self, conn: &PgConnection) -> Result<Content> {
         let content = contents::table
             .find(self.content_id)
-            .first::<Content>(conn)
-            .optional()?;
-        if let Some(content) = content {
-            Ok(content)
-        } else {
-            Err(anyhow!("Cannot find content of the revision"))
-        }
+            .first::<Content>(conn)?;
+        Ok(content)
     }
-    pub fn get_wikitext(self, conn: &PgConnection) -> Result<String> {
+    pub fn get_wikitext(&self, conn: &PgConnection) -> Result<String> {
         Ok(self.get_content(conn)?.wikitext)
+    }
+    pub fn get_actor(&self, conn: &PgConnection) -> Result<Actor> {
+        let actor = actors::table.find(self.actor_id).first::<Actor>(conn)?;
+        Ok(actor)
     }
 }

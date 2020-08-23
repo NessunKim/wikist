@@ -1,10 +1,12 @@
-use crate::schema::actors;
+use crate::models::User;
+use crate::schema::{actors, users};
 use anyhow::{anyhow, Result};
 use diesel::prelude::*;
 use ipnetwork::IpNetwork;
 use serde::Serialize;
 
-#[derive(Serialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Queryable, Associations, Identifiable, Debug)]
+#[belongs_to(User)]
 pub struct Actor {
     pub id: i32,
     pub user_id: Option<i32>,
@@ -73,6 +75,15 @@ impl Actor {
                 Ok(actor)
             }
             Err(e) => Err(anyhow!(e)),
+        }
+    }
+    pub fn get_user(&self, conn: &PgConnection) -> Result<User> {
+        match self.user_id {
+            Some(user_id) => {
+                let user = users::table.find(user_id).get_result::<User>(conn)?;
+                Ok(user)
+            }
+            None => Err(anyhow!("Anonymous user")),
         }
     }
 }

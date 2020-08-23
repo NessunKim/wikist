@@ -3,7 +3,7 @@ use crate::extractors::{ConnectionInfo, DbConnection, Query, UserInfo};
 use crate::parser;
 use actix_web::{delete, get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -92,6 +92,79 @@ pub async fn get_article(
                 None
             },
         },
+    };
+    Ok(HttpResponse::Ok().json(resp))
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum ActorEntity {
+    User { username: String },
+    Anonymous { ip_address: String },
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ArticleRevisionEntity {
+    created_at: NaiveDateTime,
+    actor: ActorEntity,
+}
+
+pub type ArticleRevisionsGetResponse = Vec<ArticleRevisionEntity>;
+
+#[get("/articles/{full_title}/revisions")]
+pub async fn get_revisions(
+    path: web::Path<(String,)>,
+    conn: DbConnection,
+) -> Result<HttpResponse, Error> {
+    use crate::models::{Actor, Article};
+    let full_title = path.0.clone();
+    let article = match Article::find_by_full_title(&conn, &full_title) {
+        Ok(Some(article)) => article,
+        Ok(None) => {
+            let full_title = path.0.clone();
+            return Ok(HttpResponse::NotFound()
+                .body(format!("No article found with full title: {}", &full_title)));
+        }
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let revisions = match article.get_all_revisions(&conn) {
+        Ok(revisions) => revisions,
+        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+    let data: Vec<ArticleRevisionEntity> = revisions
+        .iter()
+        .map(|rev| {
+            let actor = rev.get_actor(&conn)?;
+            match actor {
+                Actor {
+                    user_id: Some(_), ..
+                } => Ok(ArticleRevisionEntity {
+                    created_at: rev.created_at,
+                    actor: ActorEntity::User {
+                        username: actor.get_user(&conn)?.username,
+                    },
+                }),
+                Actor {
+                    ip_address: Some(ip_address),
+                    ..
+                } => Ok(ArticleRevisionEntity {
+                    created_at: rev.created_at,
+                    actor: ActorEntity::Anonymous {
+                        ip_address: ip_address.to_string(),
+                    },
+                }),
+                _ => Err(anyhow!("Both user_id and ip_address are null.")),
+            }
+        })
+        .collect::<Result<Vec<ArticleRevisionEntity>, _>>()
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+    let resp = Response {
+        status: "OK".to_owned(),
+        data,
     };
     Ok(HttpResponse::Ok().json(resp))
 }
