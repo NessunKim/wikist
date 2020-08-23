@@ -32,6 +32,7 @@ pub async fn run() -> std::io::Result<()> {
             .data(pool.clone())
             .service(routes::index)
             .service(routes::articles::get_article)
+            .service(routes::articles::get_revisions)
             .service(routes::articles::edit_article)
             .service(routes::articles::create_article)
             .service(routes::articles::delete_article)

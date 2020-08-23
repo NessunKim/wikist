@@ -114,7 +114,7 @@ impl Article {
             Err(anyhow!("Cannot find latest revision"))
         }
     }
-    pub fn get_all_revision(&self, conn: &PgConnection) -> Result<Vec<Revision>> {
+    pub fn get_all_revisions(&self, conn: &PgConnection) -> Result<Vec<Revision>> {
         use crate::schema::revisions;
         let revisions = Revision::belonging_to(self)
             .order(revisions::id.asc())
@@ -135,7 +135,7 @@ impl Article {
             let mut article = diesel::insert_into(articles::table)
                 .values(new_article)
                 .get_result::<Article>(conn)?;
-            let revisions = self.get_all_revision(conn)?;
+            let revisions = self.get_all_revisions(conn)?;
             let new_revisions = revisions
                 .iter()
                 .map(|rev| NewRevision {

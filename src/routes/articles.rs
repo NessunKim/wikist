@@ -4,6 +4,8 @@ use crate::parser;
 use actix_web::{delete, get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::Result;
+use chrono::prelude::*;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use validator::Validate;
@@ -81,7 +83,7 @@ pub async fn get_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ArticleGetResponse {
+        data: ArticleGetResponse {
             full_title: article.title,
             html,
             wikitext: if fields.contains(&ArticleGetQueryFields::Wikitext) {
@@ -139,7 +141,7 @@ pub async fn create_article(
             })?;
     let resp = Response {
         status: "OK".to_owned(),
-        result: ArticleCreateResponse {
+        data: ArticleCreateResponse {
             full_title: article.title,
             revision_id: article.latest_revision_id,
         },
@@ -193,7 +195,7 @@ pub async fn edit_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ArticleEditResponse {
+        data: ArticleEditResponse {
             full_title: article.title,
             revision_id: revision.id,
         },
@@ -247,7 +249,7 @@ pub async fn rename_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ArticleRenameResponse {
+        data: ArticleRenameResponse {
             full_title: article.title,
             revision_id: revision.id,
         },
@@ -293,7 +295,7 @@ pub async fn delete_article(
     };
     let resp = Response {
         status: "OK".to_owned(),
-        result: ArticleDeleteResponse {
+        data: ArticleDeleteResponse {
             full_title: article.title,
             revision_id: revision.id,
         },
@@ -400,7 +402,7 @@ mod tests {
             full_title,
             html,
             wikitext,
-        } = result.result;
+        } = result.data;
         assert_eq!(full_title, "title");
         assert_eq!(html, Some("<h2>AA</h2>\n<p>asdf</p>".to_owned()));
         assert_eq!(wikitext.is_none(), true);

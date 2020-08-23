@@ -59,7 +59,7 @@ pub async fn refresh(refresh_request: web::Json<RefreshRequest>) -> Result<HttpR
         Ok(access_token) => {
             let resp = Response {
                 status: "OK".to_owned(),
-                result: RefreshResponse { access_token },
+                data: RefreshResponse { access_token },
             };
             Ok(HttpResponse::Ok().json(resp))
         }
@@ -143,7 +143,7 @@ pub async fn auth_facebook(
     })?;
     let resp = Response {
         status: "OK".to_owned(),
-        result: AuthResponse {
+        data: AuthResponse {
             refresh_token,
             access_token,
         },
@@ -186,7 +186,7 @@ mod tests {
             .uri("/auth/facebook")
             .to_request();
         let result: Response<AuthResponse> = test::read_response_json(&mut app, req).await;
-        let AuthResponse { refresh_token, .. } = result.result;
+        let AuthResponse { refresh_token, .. } = result.data;
         let data = RefreshRequest { refresh_token };
         let req = test::TestRequest::post()
             .set_json(&data)

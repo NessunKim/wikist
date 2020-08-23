@@ -6,7 +6,7 @@ pub mod auth;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Response<T> {
     status: String,
-    result: T,
+    data: T,
 }
 
 #[get("/")]
