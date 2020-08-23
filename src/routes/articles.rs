@@ -98,13 +98,16 @@ pub async fn get_article(
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum ActorEntity {
+    #[serde(rename_all = "camelCase")]
     User { username: String },
+    #[serde(rename_all = "camelCase")]
     Anonymous { ip_address: String },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ArticleRevisionEntity {
+    id: i32,
     created_at: NaiveDateTime,
     actor: ActorEntity,
 }
@@ -139,6 +142,7 @@ pub async fn get_revisions(
                 Actor {
                     user_id: Some(_), ..
                 } => Ok(ArticleRevisionEntity {
+                    id: rev.id,
                     created_at: rev.created_at,
                     actor: ActorEntity::User {
                         username: actor.get_user(&conn)?.username,
@@ -148,9 +152,10 @@ pub async fn get_revisions(
                     ip_address: Some(ip_address),
                     ..
                 } => Ok(ArticleRevisionEntity {
+                    id: rev.id,
                     created_at: rev.created_at,
                     actor: ActorEntity::Anonymous {
-                        ip_address: ip_address.to_string(),
+                        ip_address: ip_address.ip().to_string(),
                     },
                 }),
                 _ => Err(anyhow!("Both user_id and ip_address are null.")),
