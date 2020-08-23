@@ -38,6 +38,7 @@ CREATE TABLE revisions (
     article_id INTEGER NOT NULL,
     actor_id INTEGER NOT NULL,
     content_id INTEGER NOT NULL,
+    comment TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_article FOREIGN KEY(article_id) REFERENCES articles(id),
     CONSTRAINT fk_actor FOREIGN KEY(actor_id) REFERENCES actors(id),

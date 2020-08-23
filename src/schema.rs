@@ -40,6 +40,7 @@ table! {
         article_id -> Int4,
         actor_id -> Int4,
         content_id -> Int4,
+        comment -> Text,
         created_at -> Timestamp,
     }
 }

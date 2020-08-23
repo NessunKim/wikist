@@ -24,7 +24,13 @@ struct NewArticle<'a> {
 }
 
 impl Article {
-    pub fn create(conn: &PgConnection, title: &str, wikitext: &str, actor: &Actor) -> Result<Self> {
+    pub fn create(
+        conn: &PgConnection,
+        title: &str,
+        wikitext: &str,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Self> {
         if let Some(_) = Self::find_by_full_title(conn, title)? {
             return Err(anyhow!("Article {} already exists", title));
         }
@@ -36,7 +42,7 @@ impl Article {
             let mut article = diesel::insert_into(articles::table)
                 .values(new_article)
                 .get_result::<Article>(conn)?;
-            let revision = Revision::create(conn, &article, wikitext, actor)?;
+            let revision = Revision::create(conn, &article, wikitext, comment, actor)?;
             article.set_latest_revision(conn, &revision)?;
             Ok(article)
         })
@@ -52,7 +58,12 @@ impl Article {
             .optional()?;
         Ok(article)
     }
-    pub fn add_null_revision(&mut self, conn: &PgConnection, actor: &Actor) -> Result<Revision> {
+    pub fn add_null_revision(
+        &mut self,
+        conn: &PgConnection,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Revision> {
         use crate::schema::revisions;
         conn.transaction(|| {
             let now = Utc::now().naive_utc();
@@ -61,6 +72,7 @@ impl Article {
                 article_id: self.id,
                 actor_id: actor.id,
                 content_id: content.id,
+                comment,
                 created_at: now,
             };
             let revision = diesel::insert_into(revisions::table)
@@ -73,9 +85,15 @@ impl Article {
     }
 
     /// Create a new `Revision` for this `Article`.
-    pub fn edit(&mut self, conn: &PgConnection, wikitext: &str, actor: &Actor) -> Result<Revision> {
+    pub fn edit(
+        &mut self,
+        conn: &PgConnection,
+        wikitext: &str,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Revision> {
         conn.transaction(|| {
-            let revision = Revision::create(conn, self, wikitext, actor)?;
+            let revision = Revision::create(conn, self, wikitext, comment, actor)?;
             self.set_latest_revision(conn, &revision)?;
             Ok(revision)
         })
@@ -84,22 +102,42 @@ impl Article {
     /// Change the title.
     ///
     /// Creates a null revision.
-    pub fn rename(&mut self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Revision> {
+    pub fn rename(
+        &mut self,
+        conn: &PgConnection,
+        title: &str,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Revision> {
         conn.transaction(|| {
+            let old_title = self.title.clone();
             self.title = title.to_owned();
             self.save_changes::<Self>(conn)?;
-            self.add_null_revision(conn, actor)
+            self.add_null_revision(
+                conn,
+                &format!("(Rename: {} -> {}) {}", old_title, title, comment),
+                actor,
+            )
         })
     }
 
     /// Set is_active false.
     ///
     /// Creates a null revision.
-    pub fn delete(&mut self, conn: &PgConnection, actor: &Actor) -> Result<Revision> {
+    pub fn delete(
+        &mut self,
+        conn: &PgConnection,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Revision> {
         conn.transaction(|| {
             self.is_active = false;
             self.save_changes::<Self>(conn)?;
-            self.add_null_revision(conn, actor)
+            self.add_null_revision(
+                conn,
+                &format!("(Delete: {}) {}", self.title, comment),
+                actor,
+            )
         })
     }
     pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<Revision> {
@@ -125,7 +163,13 @@ impl Article {
     /// Creates an `Article` and copies all `Revision`s to the new `Article`.
     ///
     /// Creates a null revision.
-    pub fn fork(&self, conn: &PgConnection, title: &str, actor: &Actor) -> Result<Self> {
+    pub fn fork(
+        &self,
+        conn: &PgConnection,
+        title: &str,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Self> {
         use crate::schema::revisions;
         conn.transaction(|| {
             let new_article = NewArticle {
@@ -142,6 +186,7 @@ impl Article {
                     article_id: article.id,
                     actor_id: rev.actor_id,
                     content_id: rev.content_id,
+                    comment: &rev.comment,
                     created_at: rev.created_at,
                 })
                 .collect::<Vec<NewRevision>>();
@@ -150,7 +195,11 @@ impl Article {
                 .get_results::<Revision>(conn)?;
             let latest_rev = &copied_revisions.last().unwrap();
             article.set_latest_revision(conn, latest_rev)?;
-            article.add_null_revision(conn, actor)?;
+            article.add_null_revision(
+                conn,
+                &format!("(Fork: {} -> {}) {}", self.title, title, comment),
+                actor,
+            )?;
 
             Ok(article)
         })
@@ -178,7 +227,7 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            Article::create(&conn, "test", "==test==", "Comment!", &actor).expect("must succeed");
             articles::table
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)
@@ -196,10 +245,10 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article =
-                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
+                .expect("must succeed");
             article
-                .edit(&conn, "==test-edit==", &actor)
+                .edit(&conn, "==test-edit==", "Comment!", &actor)
                 .expect("must succeed");
             let article = articles::table
                 .filter(articles::title.eq("test"))
@@ -224,10 +273,10 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article =
-                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
+            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
+                .expect("must succeed");
             article
-                .rename(&conn, "test2", &actor)
+                .rename(&conn, "test2", "Comment!", &actor)
                 .expect("must succeed");
             let article = articles::table
                 .filter(articles::title.eq("test2"))
@@ -252,9 +301,11 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article =
-                Article::create(&conn, "test", "==test==", &actor).expect("must succeed");
-            article.delete(&conn, &actor).expect("must succeed");
+            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
+                .expect("must succeed");
+            article
+                .delete(&conn, "Comment!", &actor)
+                .expect("must succeed");
             assert_eq!(article.is_active, false);
             let article = Article::find_by_full_title(&conn, "test").expect("must succeed");
             assert_eq!(article.is_none(), true);

@@ -180,6 +180,8 @@ pub struct ArticleCreateRequest {
     full_title: String,
     #[validate(length(min = 1, max = 1000000))]
     wikitext: String,
+    #[validate(length(min = 1, max = 1000))]
+    comment: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -209,13 +211,20 @@ pub async fn create_article(
             HttpResponse::InternalServerError().finish()
         })?,
     };
-    let article =
-        web::block(move || Article::create(&conn, &data.full_title, &data.wikitext, &actor))
-            .await
-            .map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
+    let article = web::block(move || {
+        Article::create(
+            &conn,
+            &data.full_title,
+            &data.wikitext,
+            &data.comment,
+            &actor,
+        )
+    })
+    .await
+    .map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleCreateResponse {
@@ -231,6 +240,8 @@ pub async fn create_article(
 pub struct ArticleEditRequest {
     #[validate(length(min = 1, max = 1000000))]
     wikitext: String,
+    #[validate(length(min = 1, max = 1000))]
+    comment: String,
 }
 
 pub type ArticleEditResponse = ArticleCreateResponse;
@@ -266,7 +277,7 @@ pub async fn edit_article(
         }
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
-    let revision = match article.edit(&conn, &data.wikitext, &actor) {
+    let revision = match article.edit(&conn, &data.wikitext, &data.comment, &actor) {
         Ok(revision) => revision,
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
@@ -283,8 +294,10 @@ pub async fn edit_article(
 #[derive(Serialize, Deserialize, Validate, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ArticleRenameRequest {
-    #[validate(length(min = 1, max = 1000000))]
+    #[validate(length(min = 1, max = 300))]
     full_title: String,
+    #[validate(length(min = 1, max = 1000))]
+    comment: String,
 }
 
 pub type ArticleRenameResponse = ArticleCreateResponse;
@@ -320,7 +333,7 @@ pub async fn rename_article(
         }
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
-    let revision = match article.rename(&conn, &data.full_title, &actor) {
+    let revision = match article.rename(&conn, &data.full_title, &data.comment, &actor) {
         Ok(revision) => revision,
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
@@ -334,6 +347,13 @@ pub async fn rename_article(
     Ok(HttpResponse::Ok().json(resp))
 }
 
+#[derive(Serialize, Deserialize, Validate, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ArticleDeleteRequest {
+    #[validate(length(min = 1, max = 1000))]
+    comment: String,
+}
+
 pub type ArticleDeleteResponse = ArticleCreateResponse;
 
 #[delete("/articles/{full_title}")]
@@ -342,6 +362,7 @@ pub async fn delete_article(
     user_info: Option<UserInfo>,
     conn: DbConnection,
     path: web::Path<(String,)>,
+    data: ValidatedJson<ArticleRenameRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article};
     let full_title = path.0.clone();
@@ -366,7 +387,7 @@ pub async fn delete_article(
         }
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
-    let revision = match article.delete(&conn, &actor) {
+    let revision = match article.delete(&conn, &data.comment, &actor) {
         Ok(revision) => revision,
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
@@ -392,8 +413,9 @@ mod tests {
         let mut app =
             test::init_service(App::new().data(pool.clone()).service(create_article)).await;
         let data = ArticleCreateRequest {
-            full_title: "AA".to_string(),
-            wikitext: "==AA==\nasdf".to_string(),
+            full_title: "AA".to_owned(),
+            wikitext: "==AA==\nasdf".to_owned(),
+            comment: "Comment!".to_owned(),
         };
         let req = test::TestRequest::post()
             .peer_addr("127.0.0.1:22342".parse().unwrap())
@@ -411,8 +433,9 @@ mod tests {
             test::init_service(App::new().data(pool.clone()).service(create_article)).await;
         {
             let data = ArticleCreateRequest {
-                full_title: "".to_string(),
-                wikitext: "==AA==\nasdf".to_string(),
+                full_title: "".to_owned(),
+                wikitext: "==AA==\nasdf".to_owned(),
+                comment: "Comment!".to_owned(),
             };
             let req = test::TestRequest::post()
                 .peer_addr("127.0.0.1:22342".parse().unwrap())
@@ -424,8 +447,9 @@ mod tests {
         }
         {
             let data = ArticleCreateRequest {
-                full_title: "asdfsdf".to_string(),
-                wikitext: "".to_string(),
+                full_title: "asdfsdf".to_owned(),
+                wikitext: "".to_owned(),
+                comment: "Comment!".to_owned(),
             };
             let req = test::TestRequest::post()
                 .peer_addr("127.0.0.1:22342".parse().unwrap())
@@ -460,8 +484,9 @@ mod tests {
         )
         .await;
         let data = ArticleCreateRequest {
-            full_title: "title".to_string(),
-            wikitext: "==AA==\nasdf".to_string(),
+            full_title: "title".to_owned(),
+            wikitext: "==AA==\nasdf".to_owned(),
+            comment: "Comment!".to_owned(),
         };
         let req = test::TestRequest::post()
             .peer_addr("127.0.0.1:22342".parse().unwrap())

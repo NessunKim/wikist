@@ -14,15 +14,17 @@ pub struct Revision {
     pub article_id: i32,
     pub actor_id: i32,
     pub content_id: i32,
+    pub comment: String,
     pub created_at: NaiveDateTime,
 }
 
 #[derive(Insertable)]
 #[table_name = "revisions"]
-pub struct NewRevision {
+pub struct NewRevision<'a> {
     pub article_id: i32,
     pub actor_id: i32,
     pub content_id: i32,
+    pub comment: &'a str,
     pub created_at: NaiveDateTime,
 }
 
@@ -43,6 +45,7 @@ impl Revision {
         conn: &PgConnection,
         article: &Article,
         wikitext: &str,
+        comment: &str,
         actor: &Actor,
     ) -> Result<Self> {
         let now = Utc::now().naive_utc();
@@ -53,6 +56,7 @@ impl Revision {
             article_id: article.id,
             actor_id: actor.id,
             content_id: content.id,
+            comment,
             created_at: now,
         };
         let revision = diesel::insert_into(revisions::table)
