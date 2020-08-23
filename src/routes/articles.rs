@@ -4,7 +4,6 @@ use crate::parser;
 use actix_web::{delete, get, post, put, web, Error, HttpResponse};
 use actix_web_validator::ValidatedJson;
 use anyhow::{anyhow, Result};
-use chrono::prelude::*;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
