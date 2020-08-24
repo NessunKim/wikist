@@ -83,7 +83,9 @@ pub async fn get_article(
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleGetResponse {
-            full_title: article.title,
+            full_title: article
+                .get_full_title(&conn)
+                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
             html,
             wikitext: if fields.contains(&ArticleGetQueryFields::Wikitext) {
                 Some(wikitext)
@@ -214,17 +216,14 @@ pub async fn create_article(
             HttpResponse::InternalServerError().finish()
         })?,
     };
-    let article = web::block(move || {
-        Article::create(
-            &conn,
-            &Namespace::default(),
-            &data.full_title,
-            &data.wikitext,
-            &data.comment,
-            &actor,
-        )
-    })
-    .await
+    let article = Article::create(
+        &conn,
+        &Namespace::default(),
+        &data.full_title,
+        &data.wikitext,
+        &data.comment,
+        &actor,
+    )
     .map_err(|e| {
         eprintln!("{}", e);
         HttpResponse::InternalServerError().finish()
@@ -232,7 +231,9 @@ pub async fn create_article(
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleCreateResponse {
-            full_title: article.title,
+            full_title: article
+                .get_full_title(&conn)
+                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
             revision_id: article.latest_revision_id,
         },
     };
@@ -344,7 +345,9 @@ pub async fn rename_article(
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleRenameResponse {
-            full_title: article.title,
+            full_title: article
+                .get_full_title(&conn)
+                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
             revision_id: revision.id,
         },
     };
@@ -398,7 +401,9 @@ pub async fn delete_article(
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleDeleteResponse {
-            full_title: article.title,
+            full_title: article
+                .get_full_title(&conn)
+                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
             revision_id: revision.id,
         },
     };

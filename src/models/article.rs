@@ -51,17 +51,30 @@ impl Article {
             Ok(article)
         })
     }
-    pub fn find_by_full_title(
-        conn: &PgConnection,
-        full_title: &str,
-    ) -> Result<Option<Self>, diesel::result::Error> {
+    pub fn find_by_full_title(conn: &PgConnection, full_title: &str) -> Result<Option<Self>> {
+        let (namespace, title) = Namespace::parse_full_title(conn, full_title)?;
         let article = articles::table
-            .filter(articles::title.eq(full_title))
+            .filter(articles::namespace_id.eq(namespace.id))
+            .filter(articles::title.eq(title))
             .filter(articles::is_active.eq(true))
             .first::<Article>(conn)
             .optional()?;
         Ok(article)
     }
+
+    pub fn get_namespace(&self, conn: &PgConnection) -> Result<Namespace> {
+        Ok(Namespace::find_by_id(conn, self.namespace_id)?.unwrap())
+    }
+
+    pub fn get_full_title(&self, conn: &PgConnection) -> Result<String> {
+        let namespace = self.get_namespace(conn)?;
+        if namespace.id == 1 {
+            Ok(self.title.to_owned())
+        } else {
+            Ok(format!("{}:{}", namespace.name, self.title))
+        }
+    }
+
     pub fn add_null_revision(
         &mut self,
         conn: &PgConnection,
