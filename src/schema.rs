@@ -46,6 +46,20 @@ table! {
 }
 
 table! {
+    roles (id) {
+        id -> Int4,
+        name -> Varchar,
+    }
+}
+
+table! {
+    user_roles (user_id, role_id) {
+        user_id -> Int4,
+        role_id -> Int4,
+    }
+}
+
+table! {
     users (id) {
         id -> Int4,
         username -> Varchar,
@@ -55,9 +69,13 @@ table! {
     }
 }
 
+joinable!(actors -> users (user_id));
+joinable!(authentications -> users (user_id));
 joinable!(revisions -> actors (actor_id));
 joinable!(revisions -> articles (article_id));
 joinable!(revisions -> contents (content_id));
+joinable!(user_roles -> roles (role_id));
+joinable!(user_roles -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     actors,
@@ -65,5 +83,7 @@ allow_tables_to_appear_in_same_query!(
     authentications,
     contents,
     revisions,
+    roles,
+    user_roles,
     users,
 );

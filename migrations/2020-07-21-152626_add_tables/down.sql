@@ -4,4 +4,6 @@ DROP TABLE contents;
 DROP TABLE articles;
 DROP TABLE authentications;
 DROP TABLE actors;
+DROP TABLE user_roles;
+DROP TABLE roles;
 DROP TABLE users;

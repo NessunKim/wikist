@@ -6,19 +6,26 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE roles (
+    id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+CREATE TABLE user_roles (
+    user_id INTEGER REFERENCES users,
+    role_id INTEGER REFERENCES roles,
+    CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id)
+);
 CREATE TABLE actors (
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id INTEGER UNIQUE NULL,
-    ip_address CIDR UNIQUE NULL,
-    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id)
+    user_id INTEGER UNIQUE NULL REFERENCES users,
+    ip_address CIDR UNIQUE NULL
 );
 CREATE TABLE authentications(
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users,
     provider VARCHAR(255) NOT NULL,
     provider_user_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_user FOREIGN KEY(user_id) REFERENCES users(id),
     UNIQUE(user_id, provider)
 );
 CREATE TABLE articles (
@@ -35,12 +42,9 @@ CREATE TABLE contents (
 );
 CREATE TABLE revisions (
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    article_id INTEGER NOT NULL,
-    actor_id INTEGER NOT NULL,
-    content_id INTEGER NOT NULL,
+    article_id INTEGER NOT NULL REFERENCES articles,
+    actor_id INTEGER NOT NULL REFERENCES actors,
+    content_id INTEGER NOT NULL REFERENCES contents,
     comment TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_article FOREIGN KEY(article_id) REFERENCES articles(id),
-    CONSTRAINT fk_actor FOREIGN KEY(actor_id) REFERENCES actors(id),
-    CONSTRAINT fk_content FOREIGN KEY(content_id) REFERENCES contents(id)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
