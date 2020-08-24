@@ -137,15 +137,6 @@ impl User {
             .optional()?;
         Ok(user_role.is_some())
     }
-
-    pub fn has_role(&self, conn: &PgConnection, role: &Role) -> Result<bool> {
-        use crate::schema::user_roles;
-        let user_role = user_roles::table
-            .find((self.id, role.id))
-            .get_result::<UserRole>(conn)
-            .optional()?;
-        Ok(user_role.is_some())
-    }
 }
 
 impl Authentication {
