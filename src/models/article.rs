@@ -1,4 +1,4 @@
-use crate::models::{Actor, NewRevision, Revision};
+use crate::models::{Actor, Namespace, NewRevision, Revision};
 use crate::schema::articles;
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
@@ -9,6 +9,7 @@ use serde::Serialize;
 #[derive(Serialize, Queryable, Identifiable, AsChangeset, Debug)]
 pub struct Article {
     pub id: i32,
+    pub namespace_id: i32,
     pub title: String,
     pub latest_revision_id: i32,
     pub is_active: bool,
@@ -19,6 +20,7 @@ pub struct Article {
 #[derive(Insertable)]
 #[table_name = "articles"]
 struct NewArticle<'a> {
+    pub namespace_id: i32,
     pub title: &'a str,
     pub latest_revision_id: i32,
 }
@@ -26,6 +28,7 @@ struct NewArticle<'a> {
 impl Article {
     pub fn create(
         conn: &PgConnection,
+        namespace: &Namespace,
         title: &str,
         wikitext: &str,
         comment: &str,
@@ -36,7 +39,8 @@ impl Article {
         }
         conn.transaction(|| {
             let new_article = NewArticle {
-                title: title,
+                namespace_id: namespace.id,
+                title,
                 latest_revision_id: -1,
             };
             let mut article = diesel::insert_into(articles::table)
@@ -166,6 +170,7 @@ impl Article {
     pub fn fork(
         &self,
         conn: &PgConnection,
+        namespace: &Namespace,
         title: &str,
         comment: &str,
         actor: &Actor,
@@ -173,7 +178,8 @@ impl Article {
         use crate::schema::revisions;
         conn.transaction(|| {
             let new_article = NewArticle {
-                title: title,
+                namespace_id: namespace.id,
+                title,
                 latest_revision_id: -1,
             };
             let mut article = diesel::insert_into(articles::table)
@@ -227,7 +233,15 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            Article::create(&conn, "test", "==test==", "Comment!", &actor).expect("must succeed");
+            Article::create(
+                &conn,
+                &Namespace::default(),
+                "test",
+                "==test==",
+                "Comment!",
+                &actor,
+            )
+            .expect("must succeed");
             articles::table
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)
@@ -245,8 +259,15 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
-                .expect("must succeed");
+            let mut article = Article::create(
+                &conn,
+                &Namespace::default(),
+                "test",
+                "==test==",
+                "Comment!",
+                &actor,
+            )
+            .expect("must succeed");
             article
                 .edit(&conn, "==test-edit==", "Comment!", &actor)
                 .expect("must succeed");
@@ -273,8 +294,15 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
-                .expect("must succeed");
+            let mut article = Article::create(
+                &conn,
+                &Namespace::default(),
+                "test",
+                "==test==",
+                "Comment!",
+                &actor,
+            )
+            .expect("must succeed");
             article
                 .rename(&conn, "test2", "Comment!", &actor)
                 .expect("must succeed");
@@ -301,8 +329,15 @@ mod tests {
         conn.test_transaction::<_, diesel::result::Error, _>(|| {
             let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
             let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
-            let mut article = Article::create(&conn, "test", "==test==", "Comment!", &actor)
-                .expect("must succeed");
+            let mut article = Article::create(
+                &conn,
+                &Namespace::default(),
+                "test",
+                "==test==",
+                "Comment!",
+                &actor,
+            )
+            .expect("must succeed");
             article
                 .delete(&conn, "Comment!", &actor)
                 .expect("must succeed");

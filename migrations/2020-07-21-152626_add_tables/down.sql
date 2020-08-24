@@ -2,6 +2,7 @@
 DROP TABLE revisions;
 DROP TABLE contents;
 DROP TABLE articles;
+DROP TABLE namespaces;
 DROP TABLE authentications;
 DROP TABLE actors;
 DROP TABLE user_roles;

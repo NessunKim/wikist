@@ -9,6 +9,7 @@ table! {
 table! {
     articles (id) {
         id -> Int4,
+        namespace_id -> Int4,
         title -> Varchar,
         latest_revision_id -> Int4,
         is_active -> Bool,
@@ -31,6 +32,13 @@ table! {
     contents (id) {
         id -> Int4,
         wikitext -> Text,
+    }
+}
+
+table! {
+    namespaces (id) {
+        id -> Int4,
+        name -> Varchar,
     }
 }
 
@@ -70,6 +78,7 @@ table! {
 }
 
 joinable!(actors -> users (user_id));
+joinable!(articles -> namespaces (namespace_id));
 joinable!(authentications -> users (user_id));
 joinable!(revisions -> actors (actor_id));
 joinable!(revisions -> articles (article_id));
@@ -82,6 +91,7 @@ allow_tables_to_appear_in_same_query!(
     articles,
     authentications,
     contents,
+    namespaces,
     revisions,
     roles,
     user_roles,

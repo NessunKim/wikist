@@ -11,8 +11,8 @@ CREATE TABLE roles (
     name VARCHAR(50) UNIQUE NOT NULL
 );
 CREATE TABLE user_roles (
-    user_id INTEGER REFERENCES users,
-    role_id INTEGER REFERENCES roles,
+    user_id INTEGER NOT NULL REFERENCES users,
+    role_id INTEGER NOT NULL REFERENCES roles,
     CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id)
 );
 CREATE TABLE actors (
@@ -28,8 +28,14 @@ CREATE TABLE authentications(
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, provider)
 );
+CREATE TABLE namespaces (
+    id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    name VARCHAR(30) NOT NULL,
+    UNIQUE(name)
+);
 CREATE TABLE articles (
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    namespace_id INTEGER NOT NULL REFERENCES namespaces,
     title VARCHAR(300) NOT NULL,
     latest_revision_id INTEGER NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -48,3 +54,4 @@ CREATE TABLE revisions (
     comment TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+INSERT INTO namespaces(name) VALUES ('_DEFAULT');

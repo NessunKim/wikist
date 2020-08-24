@@ -201,7 +201,7 @@ pub async fn create_article(
     conn: DbConnection,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::{Actor, Article};
+    use crate::models::{Actor, Article, Namespace};
     let actor = match user_info {
         Some(user_info) => {
             Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
@@ -217,6 +217,7 @@ pub async fn create_article(
     let article = web::block(move || {
         Article::create(
             &conn,
+            &Namespace::default(),
             &data.full_title,
             &data.wikitext,
             &data.comment,
@@ -434,34 +435,19 @@ mod tests {
         let pool = db::create_connection_pool();
         let mut app =
             test::init_service(App::new().data(pool.clone()).service(create_article)).await;
-        {
-            let data = ArticleCreateRequest {
-                full_title: "".to_owned(),
-                wikitext: "==AA==\nasdf".to_owned(),
-                comment: "Comment!".to_owned(),
-            };
-            let req = test::TestRequest::post()
-                .peer_addr("127.0.0.1:22342".parse().unwrap())
-                .set_json(&data)
-                .uri("/articles")
-                .to_request();
-            let resp = test::call_service(&mut app, req).await;
-            assert_eq!(resp.status().as_u16(), 400);
-        }
-        {
-            let data = ArticleCreateRequest {
-                full_title: "asdfsdf".to_owned(),
-                wikitext: "".to_owned(),
-                comment: "Comment!".to_owned(),
-            };
-            let req = test::TestRequest::post()
-                .peer_addr("127.0.0.1:22342".parse().unwrap())
-                .set_json(&data)
-                .uri("/articles")
-                .to_request();
-            let resp = test::call_service(&mut app, req).await;
-            assert_eq!(resp.status().as_u16(), 400);
-        }
+
+        let data = ArticleCreateRequest {
+            full_title: "".to_owned(),
+            wikitext: "==AA==\nasdf".to_owned(),
+            comment: "Comment!".to_owned(),
+        };
+        let req = test::TestRequest::post()
+            .peer_addr("127.0.0.1:22342".parse().unwrap())
+            .set_json(&data)
+            .uri("/articles")
+            .to_request();
+        let resp = test::call_service(&mut app, req).await;
+        assert_eq!(resp.status().as_u16(), 400);
     }
 
     #[actix_rt::test]
