@@ -85,7 +85,7 @@ impl User {
         };
         let user = diesel::insert_into(users::table)
             .values(new_user)
-            .get_result::<User>(conn)?;
+            .get_result::<Self>(conn)?;
         Ok(user)
     }
 
@@ -128,11 +128,21 @@ impl User {
         .expect("JWT encoding failed")
     }
 
-    pub fn has_any_role(&self, conn: &PgConnection, role: &[Role]) -> Result<bool> {
+    pub fn add_role(&self, conn: &PgConnection, role: &Role) -> Result<()> {
+        use crate::schema::user_roles;
+        let user_role = UserRole {
+            user_id: self.id,
+            role_id: role.id,
+        };
+        user_role.insert_into(user_roles::table).execute(conn)?;
+        Ok(())
+    }
+
+    pub fn has_any_role(&self, conn: &PgConnection, roles: &[Role]) -> Result<bool> {
         use crate::schema::user_roles;
         let user_role = user_roles::table
             .filter(user_roles::user_id.eq(self.id))
-            .filter(user_roles::role_id.eq_any(role.iter().map(|r| r.id).collect::<Vec<i32>>()))
+            .filter(user_roles::role_id.eq_any(roles.iter().map(|r| r.id).collect::<Vec<i32>>()))
             .first::<UserRole>(conn)
             .optional()?;
         Ok(user_role.is_some())
@@ -143,5 +153,27 @@ impl Authentication {
     pub fn get_user(&self, conn: &PgConnection) -> Result<User> {
         let user = users::table.find(self.user_id).get_result::<User>(conn)?;
         Ok(user)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::create_connection;
+
+    #[test]
+    fn test_has_any_role() {
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let user = User::create(&conn, "test@testtest.com", "tester22").expect("must succeed");
+            let role1 = Role::create(&conn, "Test Role").expect("must succeed");
+            let roles = [role1];
+            let has = user.has_any_role(&conn, &roles).expect("must succeed");
+            assert_eq!(has, false);
+            user.add_role(&conn, &roles[0]).expect("must succeed");
+            let has = user.has_any_role(&conn, &roles).expect("must succeed");
+            assert_eq!(has, true);
+            Ok(())
+        });
     }
 }
