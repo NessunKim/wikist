@@ -128,13 +128,23 @@ impl User {
         .expect("JWT encoding failed")
     }
 
+    pub fn has_any_role(&self, conn: &PgConnection, role: &[Role]) -> Result<bool> {
+        use crate::schema::user_roles;
+        let user_role = user_roles::table
+            .filter(user_roles::user_id.eq(self.id))
+            .filter(user_roles::role_id.eq_any(role.iter().map(|r| r.id).collect::<Vec<i32>>()))
+            .first::<UserRole>(conn)
+            .optional()?;
+        Ok(user_role.is_some())
+    }
+
     pub fn has_role(&self, conn: &PgConnection, role: &Role) -> Result<bool> {
         use crate::schema::user_roles;
-        let user_roles = user_roles::table
+        let user_role = user_roles::table
             .find((self.id, role.id))
             .get_result::<UserRole>(conn)
             .optional()?;
-        Ok(user_roles.is_some())
+        Ok(user_role.is_some())
     }
 }
 
