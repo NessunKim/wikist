@@ -1,8 +1,10 @@
 mod actor;
 mod article;
 mod revision;
+mod role;
 mod user;
 pub use actor::Actor;
 pub use article::Article;
 pub use revision::{NewRevision, Revision};
+pub use role::{Role, UserRole};
 pub use user::{User, UserFindResult};

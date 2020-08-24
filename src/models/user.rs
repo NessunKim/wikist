@@ -1,4 +1,5 @@
 use crate::auth;
+use crate::models::{Role, UserRole};
 use crate::schema::{authentications, users};
 use anyhow::Result;
 use chrono::prelude::*;
@@ -125,6 +126,15 @@ impl User {
             &EncodingKey::from_secret(secret.as_ref()),
         )
         .expect("JWT encoding failed")
+    }
+
+    pub fn has_role(&self, conn: &PgConnection, role: &Role) -> Result<bool> {
+        use crate::schema::user_roles;
+        let user_roles = user_roles::table
+            .find((self.id, role.id))
+            .get_result::<UserRole>(conn)
+            .optional()?;
+        Ok(user_roles.is_some())
     }
 }
 
