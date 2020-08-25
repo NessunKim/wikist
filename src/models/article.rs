@@ -360,4 +360,28 @@ mod tests {
             Ok(())
         });
     }
+
+    #[test]
+    fn test_get_full_title() {
+        use crate::schema::namespaces;
+        use diesel;
+        use diesel::prelude::*;
+        use ipnetwork::IpNetwork;
+        use std::str::FromStr;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
+            let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
+            let namespace = diesel::insert_into(namespaces::table)
+                .values(namespaces::name.eq("Test"))
+                .get_result::<Namespace>(&conn)
+                .expect("must succeed");
+            let article =
+                Article::create(&conn, &namespace, "test", "==test==", "Comment!", &actor)
+                    .expect("must succeed");
+            let full_title = article.get_full_title(&conn).expect("must succeed");
+            assert_eq!(full_title, "Test:test");
+            Ok(())
+        });
+    }
 }
