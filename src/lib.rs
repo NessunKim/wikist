@@ -6,6 +6,7 @@ extern crate validator;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
+use actix_web_validator::JsonConfig;
 pub mod auth;
 pub mod db;
 pub mod extractors;
@@ -16,12 +17,13 @@ pub mod routes;
 pub mod schema;
 
 pub async fn run() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=info");
+    std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=debug");
     std::env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
     let pool = db::create_connection_pool();
     HttpServer::new(move || {
         App::new()
+            .app_data(JsonConfig::default().limit(1024 * 1024 * 50))
             .wrap(Logger::default())
             .wrap(
                 Cors::new() // <- Construct CORS middleware builder
