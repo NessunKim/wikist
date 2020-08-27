@@ -142,6 +142,14 @@ mod tests {
             "<table class=\"t\">\n<tbody><tr class=\"r\">\n<td class=\"c\">content\n</td></tr></tbody></table>\n",
         );
 
+        // xss test
+        let wikitext = "{| onclick=\"alert('xss')\"\n| a\n|}";
+        let result = Configuration::default().parse(wikitext);
+        assert_ne!(
+            render(&result),
+            "<table onclick=\"alert('xss')\">\n<tbody><tr>\n<td>a\n</td></tr></tbody></table>\n",
+        );
+
         let wikitext = "{|
 |+ c1
 |+ c2
