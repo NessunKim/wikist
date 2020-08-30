@@ -74,3 +74,45 @@ impl Redirection {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::create_connection;
+
+    #[test]
+    fn test_create_redirection() {
+        use ipnetwork::IpNetwork;
+        use std::str::FromStr;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let ip_address = IpNetwork::from_str("127.0.0.1").expect("must succeed");
+            let actor = Actor::find_or_create_from_ip(&conn, &ip_address).expect("must succeed");
+            let mut article = Article::create(
+                &conn,
+                &Namespace::default(),
+                "test",
+                "==test==",
+                "Comment!",
+                &actor,
+            )
+            .expect("must succeed");
+
+            Redirection::create(
+                &conn,
+                &mut article,
+                &Namespace::default(),
+                "redirection_test",
+                "redirection comment",
+                &actor,
+            )
+            .expect("must succeed");
+            let rev = article.get_latest_revision(&conn).expect("must succeed");
+            assert_eq!(
+                rev.comment,
+                "(Add redirection: <- redirection_test) redirection comment"
+            );
+            Ok(())
+        });
+    }
+}
