@@ -51,4 +51,11 @@ impl Namespace {
             _ => panic!(),
         }
     }
+    pub fn join(&self, title: &str) -> String {
+        if self.id == 1 {
+            title.to_owned()
+        } else {
+            format!("{}:{}", self.name, title)
+        }
+    }
 }

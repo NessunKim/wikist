@@ -1,4 +1,5 @@
 -- This file should undo anything in `up.sql`
+DROP TABLE redirections;
 DROP TABLE revisions;
 DROP TABLE contents;
 DROP TABLE articles;

@@ -34,8 +34,11 @@ impl Article {
         comment: &str,
         actor: &Actor,
     ) -> Result<Self> {
-        if let Some(_) = Self::find_by_full_title(conn, title)? {
-            return Err(anyhow!("Article {} already exists", title));
+        if let Some(_) = Self::find(conn, namespace, title)? {
+            return Err(anyhow!(
+                "Article {} already exists",
+                Namespace::join(namespace, title)
+            ));
         }
         conn.transaction(|| {
             let new_article = NewArticle {
@@ -50,6 +53,15 @@ impl Article {
             article.set_latest_revision(conn, &revision)?;
             Ok(article)
         })
+    }
+    pub fn find(conn: &PgConnection, namespace: &Namespace, title: &str) -> Result<Option<Self>> {
+        let article = articles::table
+            .filter(articles::namespace_id.eq(namespace.id))
+            .filter(articles::title.eq(title))
+            .filter(articles::is_active.eq(true))
+            .first::<Article>(conn)
+            .optional()?;
+        Ok(article)
     }
     pub fn find_by_full_title(conn: &PgConnection, full_title: &str) -> Result<Option<Self>> {
         let (namespace, title) = Namespace::parse_full_title(conn, full_title)?;

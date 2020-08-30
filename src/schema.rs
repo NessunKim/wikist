@@ -43,6 +43,16 @@ table! {
 }
 
 table! {
+    redirections (id) {
+        id -> Int4,
+        namespace_id -> Int4,
+        title -> Varchar,
+        target_id -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     revisions (id) {
         id -> Int4,
         article_id -> Int4,
@@ -80,6 +90,8 @@ table! {
 joinable!(actors -> users (user_id));
 joinable!(articles -> namespaces (namespace_id));
 joinable!(authentications -> users (user_id));
+joinable!(redirections -> articles (target_id));
+joinable!(redirections -> namespaces (namespace_id));
 joinable!(revisions -> actors (actor_id));
 joinable!(revisions -> articles (article_id));
 joinable!(revisions -> contents (content_id));
@@ -92,6 +104,7 @@ allow_tables_to_appear_in_same_query!(
     authentications,
     contents,
     namespaces,
+    redirections,
     revisions,
     roles,
     user_roles,

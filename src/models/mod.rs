@@ -1,6 +1,7 @@
 mod actor;
 mod article;
 mod namespace;
+mod redirection;
 mod revision;
 mod role;
 mod user;
