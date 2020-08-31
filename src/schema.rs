@@ -55,6 +55,7 @@ table! {
         can_edit -> Bool,
         can_rename -> Bool,
         can_delete -> Bool,
+        can_grant -> Bool,
     }
 }
 

@@ -70,6 +70,7 @@ CREATE TABLE namespace_permissions (
     can_edit BOOLEAN NOT NULL,
     can_rename BOOLEAN NOT NULL,
     can_delete BOOLEAN NOT NULL,
+    can_grant BOOLEAN NOT NULL,
     CONSTRAINT namespace_permissions_pkey PRIMARY KEY (namespace_id, role_id)
 );
 CREATE TABLE article_permissions (

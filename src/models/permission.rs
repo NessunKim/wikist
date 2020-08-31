@@ -29,4 +29,5 @@ pub struct NamespacePermission {
     pub can_edit: bool,
     pub can_rename: bool,
     pub can_delete: bool,
+    pub can_grant: bool,
 }
