@@ -4,7 +4,7 @@ use anyhow::Result;
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Serialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Queryable, Identifiable, Debug, Eq)]
 pub struct Role {
     pub id: i32,
     pub name: String,
@@ -19,7 +19,34 @@ pub struct UserRole {
     pub role_id: i32,
 }
 
+impl PartialEq for Role {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 impl Role {
+    pub fn root() -> Self {
+        Self {
+            id: 1,
+            name: "Root".to_owned(),
+        }
+    }
+
+    pub fn anonymous() -> Self {
+        Self {
+            id: 2,
+            name: "Anonymous".to_owned(),
+        }
+    }
+
+    pub fn logged_in() -> Self {
+        Self {
+            id: 3,
+            name: "LoggedIn".to_owned(),
+        }
+    }
+
     pub fn create(conn: &PgConnection, name: &str) -> Result<Self> {
         let role = diesel::insert_into(roles::table)
             .values(roles::name.eq(name))

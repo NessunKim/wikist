@@ -3,10 +3,16 @@ use anyhow::Result;
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Serialize, Queryable, Identifiable, Debug)]
+#[derive(Serialize, Queryable, Identifiable, Debug, Eq)]
 pub struct Namespace {
     pub id: i32,
     pub name: String,
+}
+
+impl PartialEq for Namespace {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl Default for Namespace {
@@ -52,7 +58,7 @@ impl Namespace {
         }
     }
     pub fn join(&self, title: &str) -> String {
-        if self.id == 1 {
+        if self == &Self::default() {
             title.to_owned()
         } else {
             format!("{}:{}", self.name, title)

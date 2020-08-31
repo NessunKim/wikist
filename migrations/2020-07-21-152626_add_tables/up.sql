@@ -84,3 +84,12 @@ CREATE TABLE article_permissions (
 );
 
 INSERT INTO namespaces(name) VALUES ('_DEFAULT');
+INSERT INTO roles(name) VALUES ('Root');
+INSERT INTO roles(name) VALUES ('Anonymous');
+INSERT INTO roles(name) VALUES ('LoggedIn');
+INSERT INTO namespace_permissions
+    (namespace_id, role_id, can_create, can_read, can_edit, can_rename, can_delete, can_grant)
+    VALUES
+        (1, 1, true, true, true, true, true, true),
+        (1, 2, true, true, true, false, false, false),
+        (1, 3, true, true, true, true, false, false);
