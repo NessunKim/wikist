@@ -10,10 +10,10 @@ table! {
     article_permissions (article_id, role_id) {
         article_id -> Int4,
         role_id -> Int4,
-        can_read -> Bool,
-        can_edit -> Bool,
-        can_rename -> Bool,
-        can_delete -> Bool,
+        can_read -> Nullable<Bool>,
+        can_edit -> Nullable<Bool>,
+        can_rename -> Nullable<Bool>,
+        can_delete -> Nullable<Bool>,
     }
 }
 

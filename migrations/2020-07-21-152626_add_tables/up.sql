@@ -76,10 +76,10 @@ CREATE TABLE namespace_permissions (
 CREATE TABLE article_permissions (
     article_id INTEGER NOT NULL REFERENCES articles,
     role_id INTEGER NOT NULL REFERENCES roles,
-    can_read BOOLEAN NOT NULL,
-    can_edit BOOLEAN NOT NULL,
-    can_rename BOOLEAN NOT NULL,
-    can_delete BOOLEAN NOT NULL,
+    can_read BOOLEAN NULL,
+    can_edit BOOLEAN NULL,
+    can_rename BOOLEAN NULL,
+    can_delete BOOLEAN NULL,
     CONSTRAINT article_permissions_pkey PRIMARY KEY (article_id, role_id)
 );
 
