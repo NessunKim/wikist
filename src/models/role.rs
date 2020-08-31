@@ -4,7 +4,7 @@ use anyhow::Result;
 use diesel::prelude::*;
 use serde::Serialize;
 
-#[derive(Serialize, Queryable, Identifiable, Debug, Eq)]
+#[derive(Serialize, Queryable, Identifiable, Debug, Eq, Clone)]
 pub struct Role {
     pub id: i32,
     pub name: String,
@@ -23,6 +23,38 @@ impl PartialEq for Role {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
+}
+
+/// Generates permission checking methods
+macro_rules! permission_checker_for_article {
+    ($x:ident) => {
+        pub fn $x(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
+            let article_permission = ArticlePermission::belonging_to(self)
+                .filter(article_permissions::article_id.eq(article.id))
+                .filter(article_permissions::$x.is_not_null())
+                .first::<ArticlePermission>(conn)
+                .optional()?;
+            if let Some(article_permission) = article_permission {
+                return Ok(article_permission.$x.unwrap());
+            }
+            let namespace_permission = NamespacePermission::belonging_to(self)
+                .filter(namespace_permissions::namespace_id.eq(article.namespace_id))
+                .first::<NamespacePermission>(conn)?;
+            Ok(namespace_permission.$x)
+        }
+    };
+}
+
+/// Generates permission checking methods
+macro_rules! permission_checker_for_namespace {
+    ($x:ident) => {
+        pub fn $x(&self, conn: &PgConnection, namespace: &Namespace) -> Result<bool> {
+            let namespace_permission = NamespacePermission::belonging_to(self)
+                .filter(namespace_permissions::namespace_id.eq(namespace.id))
+                .first::<NamespacePermission>(conn)?;
+            Ok(namespace_permission.$x)
+        }
+    };
 }
 
 impl Role {
@@ -58,81 +90,10 @@ impl Role {
         user.add_role(conn, self)
     }
 
-    pub fn can_read(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
-        let article_permission = ArticlePermission::belonging_to(self)
-            .filter(article_permissions::article_id.eq(article.id))
-            .filter(article_permissions::can_read.is_not_null())
-            .first::<ArticlePermission>(conn)
-            .optional()?;
-        if let Some(article_permission) = article_permission {
-            return Ok(article_permission.can_read.unwrap());
-        }
-
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(article.namespace_id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_read)
-    }
-
-    pub fn can_edit(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
-        let article_permission = ArticlePermission::belonging_to(self)
-            .filter(article_permissions::article_id.eq(article.id))
-            .filter(article_permissions::can_edit.is_not_null())
-            .first::<ArticlePermission>(conn)
-            .optional()?;
-        if let Some(article_permission) = article_permission {
-            return Ok(article_permission.can_edit.unwrap());
-        }
-
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(article.namespace_id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_edit)
-    }
-
-    pub fn can_rename(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
-        let article_permission = ArticlePermission::belonging_to(self)
-            .filter(article_permissions::article_id.eq(article.id))
-            .filter(article_permissions::can_rename.is_not_null())
-            .first::<ArticlePermission>(conn)
-            .optional()?;
-        if let Some(article_permission) = article_permission {
-            return Ok(article_permission.can_rename.unwrap());
-        }
-
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(article.namespace_id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_rename)
-    }
-
-    pub fn can_delete(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
-        let article_permission = ArticlePermission::belonging_to(self)
-            .filter(article_permissions::article_id.eq(article.id))
-            .filter(article_permissions::can_delete.is_not_null())
-            .first::<ArticlePermission>(conn)
-            .optional()?;
-        if let Some(article_permission) = article_permission {
-            return Ok(article_permission.can_delete.unwrap());
-        }
-
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(article.namespace_id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_delete)
-    }
-
-    pub fn can_create(&self, conn: &PgConnection, namespace: &Namespace) -> Result<bool> {
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(namespace.id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_create)
-    }
-
-    pub fn can_grant(&self, conn: &PgConnection, namespace: &Namespace) -> Result<bool> {
-        let namespace_permission = NamespacePermission::belonging_to(self)
-            .filter(namespace_permissions::namespace_id.eq(namespace.id))
-            .first::<NamespacePermission>(conn)?;
-        Ok(namespace_permission.can_grant)
-    }
+    permission_checker_for_article!(can_read);
+    permission_checker_for_article!(can_edit);
+    permission_checker_for_article!(can_rename);
+    permission_checker_for_article!(can_delete);
+    permission_checker_for_namespace!(can_create);
+    permission_checker_for_namespace!(can_grant);
 }

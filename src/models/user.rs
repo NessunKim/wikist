@@ -1,5 +1,5 @@
 use crate::auth;
-use crate::models::{Role, UserRole};
+use crate::models::{Article, Namespace, Role, UserRole};
 use crate::schema::{authentications, users};
 use anyhow::Result;
 use chrono::prelude::*;
@@ -49,6 +49,35 @@ pub enum UserFindResult {
     WrongProvider(User), // Same email, but different provider
     NotExists,
 }
+
+/// Generates permission checking methods
+macro_rules! permission_checker_for_article {
+    ($x:ident) => {
+        pub fn $x(&self, conn: &PgConnection, article: &Article) -> Result<bool> {
+            for role in self.get_roles(conn)?.iter() {
+                if role.$x(conn, article)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+    };
+}
+
+/// Generates permission checking methods
+macro_rules! permission_checker_for_namespace {
+    ($x:ident) => {
+        pub fn $x(&self, conn: &PgConnection, namespace: &Namespace) -> Result<bool> {
+            for role in self.get_roles(conn)?.iter() {
+                if role.$x(conn, namespace)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+    };
+}
+
 impl User {
     pub fn find(
         conn: &PgConnection,
@@ -138,6 +167,15 @@ impl User {
         Ok(())
     }
 
+    pub fn get_roles(&self, conn: &PgConnection) -> Result<Vec<Role>> {
+        use crate::schema::{roles, user_roles};
+        let res = roles::table
+            .inner_join(user_roles::table.inner_join(users::table))
+            .filter(users::id.eq(self.id))
+            .load::<(Role, (UserRole, User))>(conn)?;
+        Ok(res.iter().map(|r| r.0.clone()).collect::<Vec<Role>>())
+    }
+
     pub fn has_any_role(&self, conn: &PgConnection, roles: &[Role]) -> Result<bool> {
         use crate::schema::user_roles;
         let user_role = user_roles::table
@@ -147,6 +185,13 @@ impl User {
             .optional()?;
         Ok(user_role.is_some())
     }
+
+    permission_checker_for_article!(can_read);
+    permission_checker_for_article!(can_edit);
+    permission_checker_for_article!(can_rename);
+    permission_checker_for_article!(can_delete);
+    permission_checker_for_namespace!(can_create);
+    permission_checker_for_namespace!(can_grant);
 }
 
 impl Authentication {
@@ -173,6 +218,21 @@ mod tests {
             user.add_role(&conn, &roles[0]).expect("must succeed");
             let has = user.has_any_role(&conn, &roles).expect("must succeed");
             assert_eq!(has, true);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_can_create_default() {
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let user = User::create(&conn, "test@testtest.com", "tester22").expect("must succeed");
+            let role = Role::logged_in();
+            user.add_role(&conn, &role).expect("must succeed");
+            let can_create = user
+                .can_create(&conn, &Namespace::default())
+                .expect("must succeed");
+            assert_eq!(can_create, true);
             Ok(())
         });
     }
