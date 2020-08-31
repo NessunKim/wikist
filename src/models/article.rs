@@ -76,11 +76,7 @@ impl Article {
 
     pub fn get_full_title(&self, conn: &PgConnection) -> Result<String> {
         let namespace = self.get_namespace(conn)?;
-        if namespace.id == 1 {
-            Ok(self.title.to_owned())
-        } else {
-            Ok(format!("{}:{}", namespace.name, self.title))
-        }
+        Ok(namespace.join(&self.title))
     }
 
     pub fn add_null_revision(
