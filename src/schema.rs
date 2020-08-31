@@ -50,6 +50,7 @@ table! {
     namespace_permissions (namespace_id, role_id) {
         namespace_id -> Int4,
         role_id -> Int4,
+        can_create -> Bool,
         can_read -> Bool,
         can_edit -> Bool,
         can_rename -> Bool,

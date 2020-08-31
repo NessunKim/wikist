@@ -24,6 +24,7 @@ pub struct ArticlePermission {
 pub struct NamespacePermission {
     pub namespace_id: i32,
     pub role_id: i32,
+    pub can_create: bool,
     pub can_read: bool,
     pub can_edit: bool,
     pub can_rename: bool,

@@ -65,6 +65,7 @@ CREATE TABLE redirections (
 CREATE TABLE namespace_permissions (
     namespace_id INTEGER NOT NULL REFERENCES namespaces,
     role_id INTEGER NOT NULL REFERENCES roles,
+    can_create BOOLEAN NOT NULL,
     can_read BOOLEAN NOT NULL,
     can_edit BOOLEAN NOT NULL,
     can_rename BOOLEAN NOT NULL,
