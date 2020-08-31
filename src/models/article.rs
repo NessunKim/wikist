@@ -54,6 +54,7 @@ impl Article {
             Ok(article)
         })
     }
+
     pub fn find(conn: &PgConnection, namespace: &Namespace, title: &str) -> Result<Option<Self>> {
         let article = articles::table
             .filter(articles::namespace_id.eq(namespace.id))
@@ -63,15 +64,10 @@ impl Article {
             .optional()?;
         Ok(article)
     }
+
     pub fn find_by_full_title(conn: &PgConnection, full_title: &str) -> Result<Option<Self>> {
         let (namespace, title) = Namespace::parse_full_title(conn, full_title)?;
-        let article = articles::table
-            .filter(articles::namespace_id.eq(namespace.id))
-            .filter(articles::title.eq(title))
-            .filter(articles::is_active.eq(true))
-            .first::<Article>(conn)
-            .optional()?;
-        Ok(article)
+        Self::find(conn, &namespace, &title)
     }
 
     pub fn get_namespace(&self, conn: &PgConnection) -> Result<Namespace> {
@@ -169,6 +165,7 @@ impl Article {
             )
         })
     }
+
     pub fn get_latest_revision(&self, conn: &PgConnection) -> Result<Revision> {
         use crate::schema::revisions;
         let latest = revisions::table
@@ -181,6 +178,7 @@ impl Article {
             Err(anyhow!("Cannot find latest revision"))
         }
     }
+
     pub fn get_all_revisions(&self, conn: &PgConnection) -> Result<Vec<Revision>> {
         use crate::schema::revisions;
         let revisions = Revision::belonging_to(self)
