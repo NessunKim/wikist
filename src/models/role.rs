@@ -26,4 +26,8 @@ impl Role {
             .get_result(conn)?;
         Ok(role)
     }
+
+    pub fn add_user(&self, conn: &PgConnection, user: &User) -> Result<()> {
+        user.add_role(conn, self)
+    }
 }
