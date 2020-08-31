@@ -7,6 +7,17 @@ table! {
 }
 
 table! {
+    article_permissions (article_id, role_id) {
+        article_id -> Int4,
+        role_id -> Int4,
+        can_read -> Bool,
+        can_edit -> Bool,
+        can_rename -> Bool,
+        can_delete -> Bool,
+    }
+}
+
+table! {
     articles (id) {
         id -> Int4,
         namespace_id -> Int4,
@@ -32,6 +43,17 @@ table! {
     contents (id) {
         id -> Int4,
         wikitext -> Text,
+    }
+}
+
+table! {
+    namespace_permissions (namespace_id, role_id) {
+        namespace_id -> Int4,
+        role_id -> Int4,
+        can_read -> Bool,
+        can_edit -> Bool,
+        can_rename -> Bool,
+        can_delete -> Bool,
     }
 }
 
@@ -88,8 +110,12 @@ table! {
 }
 
 joinable!(actors -> users (user_id));
+joinable!(article_permissions -> articles (article_id));
+joinable!(article_permissions -> roles (role_id));
 joinable!(articles -> namespaces (namespace_id));
 joinable!(authentications -> users (user_id));
+joinable!(namespace_permissions -> namespaces (namespace_id));
+joinable!(namespace_permissions -> roles (role_id));
 joinable!(redirections -> articles (target_id));
 joinable!(redirections -> namespaces (namespace_id));
 joinable!(revisions -> actors (actor_id));
@@ -100,9 +126,11 @@ joinable!(user_roles -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     actors,
+    article_permissions,
     articles,
     authentications,
     contents,
+    namespace_permissions,
     namespaces,
     redirections,
     revisions,

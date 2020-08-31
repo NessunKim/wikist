@@ -62,5 +62,23 @@ CREATE TABLE redirections (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(namespace_id, title)
 );
+CREATE TABLE namespace_permissions (
+    namespace_id INTEGER NOT NULL REFERENCES namespaces,
+    role_id INTEGER NOT NULL REFERENCES roles,
+    can_read BOOLEAN NOT NULL,
+    can_edit BOOLEAN NOT NULL,
+    can_rename BOOLEAN NOT NULL,
+    can_delete BOOLEAN NOT NULL,
+    CONSTRAINT namespace_permissions_pkey PRIMARY KEY (namespace_id, role_id)
+);
+CREATE TABLE article_permissions (
+    article_id INTEGER NOT NULL REFERENCES articles,
+    role_id INTEGER NOT NULL REFERENCES roles,
+    can_read BOOLEAN NOT NULL,
+    can_edit BOOLEAN NOT NULL,
+    can_rename BOOLEAN NOT NULL,
+    can_delete BOOLEAN NOT NULL,
+    CONSTRAINT article_permissions_pkey PRIMARY KEY (article_id, role_id)
+);
 
 INSERT INTO namespaces(name) VALUES ('_DEFAULT');
