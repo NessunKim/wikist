@@ -1,4 +1,4 @@
-use crate::models::{Actor, Article, Namespace};
+use crate::models::{Actor, Article, Namespace, Revision};
 use crate::schema::redirections;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
@@ -39,7 +39,7 @@ impl Redirection {
         title: &str,
         comment: &str,
         actor: &Actor,
-    ) -> Result<Self> {
+    ) -> Result<(Self, Revision)> {
         if let Some(_) = Self::find(conn, namespace, title)? {
             return Err(anyhow!(
                 "Redirection {} already exists",
@@ -61,7 +61,7 @@ impl Redirection {
             let redirection = diesel::insert_into(redirections::table)
                 .values(new_redirection)
                 .get_result::<Self>(conn)?;
-            target.add_null_revision(
+            let revision = target.add_null_revision(
                 conn,
                 &format!(
                     "(Add redirection: <- {}) {}",
@@ -70,7 +70,7 @@ impl Redirection {
                 ),
                 actor,
             )?;
-            Ok(redirection)
+            Ok((redirection, revision))
         })
     }
 }
@@ -98,7 +98,7 @@ mod tests {
             )
             .expect("must succeed");
 
-            Redirection::create(
+            let (_redirection, rev) = Redirection::create(
                 &conn,
                 &mut article,
                 &Namespace::default(),
@@ -107,7 +107,6 @@ mod tests {
                 &actor,
             )
             .expect("must succeed");
-            let rev = article.get_latest_revision(&conn).expect("must succeed");
             assert_eq!(
                 rev.comment,
                 "(Add redirection: <- redirection_test) redirection comment"

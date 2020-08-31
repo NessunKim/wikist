@@ -243,7 +243,7 @@ impl Article {
         title: &str,
         comment: &str,
         actor: &Actor,
-    ) -> Result<Redirection> {
+    ) -> Result<(Redirection, Revision)> {
         Redirection::create(conn, self, namespace, title, comment, actor)
     }
 
