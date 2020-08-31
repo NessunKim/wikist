@@ -1,4 +1,4 @@
-use crate::models::{Actor, Namespace, NewRevision, Revision};
+use crate::models::{Actor, Namespace, NewRevision, Redirection, Revision};
 use crate::schema::articles;
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
@@ -234,6 +234,17 @@ impl Article {
 
             Ok(article)
         })
+    }
+
+    pub fn add_redirection(
+        &mut self,
+        conn: &PgConnection,
+        namespace: &Namespace,
+        title: &str,
+        comment: &str,
+        actor: &Actor,
+    ) -> Result<Redirection> {
+        Redirection::create(conn, self, namespace, title, comment, actor)
     }
 
     fn set_latest_revision(&mut self, conn: &PgConnection, revision: &Revision) -> Result<()> {
