@@ -115,7 +115,8 @@ pub async fn auth_facebook(
     let mut is_new_user: bool = false;
     let refresh_token: String = conn
         .transaction::<_, Error, _>(|| {
-            let user_find_result = User::find(&conn, &email, "facebook", &fb_auth_request.user_id)?;
+            let user_find_result =
+                User::find_by_provider(&conn, &email, "facebook", &fb_auth_request.user_id)?;
             let refresh_token = match user_find_result {
                 UserFindResult::Exists(user) => {
                     is_new_user = false;

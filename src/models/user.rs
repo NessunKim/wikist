@@ -79,7 +79,10 @@ macro_rules! permission_checker_for_namespace {
 }
 
 impl User {
-    pub fn find(
+    pub fn find_by_id(conn: &PgConnection, id: i32) -> Result<User> {
+        Ok(users::table.find(id).first(conn)?)
+    }
+    pub fn find_by_provider(
         conn: &PgConnection,
         email: &str,
         provider: &str,

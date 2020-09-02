@@ -259,20 +259,9 @@ pub async fn edit_article(
     path: web::Path<(String,)>,
     data: ValidatedJson<ArticleEditRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::{Actor, Article};
+    use crate::models::{Actor, Article, Role, User};
+
     let full_title = path.0.clone();
-    let actor = match user_info {
-        Some(user_info) => {
-            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
-        }
-        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?,
-    };
     let mut article = match Article::find_by_full_title(&conn, &full_title) {
         Ok(Some(article)) => article,
         Ok(None) => {
@@ -282,10 +271,45 @@ pub async fn edit_article(
         }
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
+
+    let actor = match user_info {
+        Some(user_info) => {
+            let user = User::find_by_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            let can_edit = user.can_edit(&conn, &article).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            if !can_edit {
+                return Ok(HttpResponse::Unauthorized().finish());
+            }
+            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
+        None => {
+            let can_edit = Role::anonymous().can_edit(&conn, &article).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            if !can_edit {
+                return Ok(HttpResponse::Unauthorized().finish());
+            }
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
+    };
+
     let revision = match article.edit(&conn, &data.wikitext, &data.comment, &actor) {
         Ok(revision) => revision,
         Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
     };
+
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleEditResponse {
