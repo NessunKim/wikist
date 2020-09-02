@@ -283,7 +283,7 @@ pub async fn edit_article(
                 HttpResponse::InternalServerError().finish()
             })?;
             if !can_edit {
-                return Ok(HttpResponse::Unauthorized().finish());
+                return Ok(HttpResponse::Forbidden().finish());
             }
             Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
                 eprintln!("{}", e);
@@ -296,7 +296,7 @@ pub async fn edit_article(
                 HttpResponse::InternalServerError().finish()
             })?;
             if !can_edit {
-                return Ok(HttpResponse::Unauthorized().finish());
+                return Ok(HttpResponse::Forbidden().finish());
             }
             Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
                 eprintln!("{}", e);
