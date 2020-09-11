@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate diesel;
+extern crate diesel_full_text_search;
 #[macro_use]
 extern crate validator_derive;
 extern crate validator;
@@ -7,6 +8,7 @@ extern crate validator;
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, App, HttpServer};
 use actix_web_validator::JsonConfig;
+
 pub mod auth;
 pub mod db;
 pub mod extractors;

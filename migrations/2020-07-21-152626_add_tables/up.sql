@@ -42,6 +42,11 @@ CREATE TABLE articles (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(namespace_id, title)
 );
+CREATE TABLE article_searches (
+    article_id INTEGER PRIMARY KEY REFERENCES articles,
+    vector TSVECTOR NOT NULL
+);
+CREATE INDEX article_searches_vector_idx ON article_searches USING GIN (vector);
 CREATE TABLE contents (
     id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     wikitext TEXT NOT NULL
@@ -82,14 +87,24 @@ CREATE TABLE article_permissions (
     can_delete BOOLEAN NULL,
     CONSTRAINT article_permissions_pkey PRIMARY KEY (article_id, role_id)
 );
-
-INSERT INTO namespaces(name) VALUES ('_DEFAULT');
-INSERT INTO roles(name) VALUES ('Root');
-INSERT INTO roles(name) VALUES ('Anonymous');
-INSERT INTO roles(name) VALUES ('LoggedIn');
-INSERT INTO namespace_permissions
-    (namespace_id, role_id, can_create, can_read, can_edit, can_rename, can_delete, can_grant)
-    VALUES
-        (1, 1, true, true, true, true, true, true),
-        (1, 2, true, true, true, false, false, false),
-        (1, 3, true, true, true, true, false, false);
+INSERT INTO namespaces(name)
+VALUES ('_DEFAULT');
+INSERT INTO roles(name)
+VALUES ('Root');
+INSERT INTO roles(name)
+VALUES ('Anonymous');
+INSERT INTO roles(name)
+VALUES ('LoggedIn');
+INSERT INTO namespace_permissions (
+        namespace_id,
+        role_id,
+        can_create,
+        can_read,
+        can_edit,
+        can_rename,
+        can_delete,
+        can_grant
+    )
+VALUES (1, 1, true, true, true, true, true, true),
+    (1, 2, true, true, true, false, false, false),
+    (1, 3, true, true, true, true, false, false);

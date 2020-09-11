@@ -4,6 +4,7 @@ DROP TABLE namespace_permissions;
 DROP TABLE redirections;
 DROP TABLE revisions;
 DROP TABLE contents;
+DROP TABLE article_searches;
 DROP TABLE articles;
 DROP TABLE namespaces;
 DROP TABLE authentications;

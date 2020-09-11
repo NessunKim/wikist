@@ -18,6 +18,15 @@ table! {
 }
 
 table! {
+    use diesel_full_text_search::TsVector;
+    use diesel::sql_types::Int4;
+    article_searches (article_id) {
+        article_id -> Int4,
+        vector -> TsVector,
+    }
+}
+
+table! {
     articles (id) {
         id -> Int4,
         namespace_id -> Int4,
@@ -114,6 +123,7 @@ table! {
 joinable!(actors -> users (user_id));
 joinable!(article_permissions -> articles (article_id));
 joinable!(article_permissions -> roles (role_id));
+joinable!(article_searches -> articles (article_id));
 joinable!(articles -> namespaces (namespace_id));
 joinable!(authentications -> users (user_id));
 joinable!(namespace_permissions -> namespaces (namespace_id));
@@ -129,6 +139,7 @@ joinable!(user_roles -> users (user_id));
 allow_tables_to_appear_in_same_query!(
     actors,
     article_permissions,
+    article_searches,
     articles,
     authentications,
     contents,

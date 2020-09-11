@@ -1,5 +1,6 @@
 mod actor;
 mod article;
+mod article_search;
 mod namespace;
 mod permission;
 mod redirection;
@@ -8,6 +9,7 @@ mod role;
 mod user;
 pub use actor::Actor;
 pub use article::Article;
+pub use article_search::ArticleSearch;
 pub use namespace::Namespace;
 pub use permission::{ArticlePermission, NamespacePermission};
 pub use redirection::Redirection;

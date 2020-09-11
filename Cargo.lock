@@ -568,6 +568,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel_full_text_search"
+version = "1.1.0"
+source = "git+https://github.com/diesel-rs/diesel_full_text_search#2e4dc7579dad7fdbb1eaa916ed13592a746d33e2"
+dependencies = [
+ "diesel",
+]
+
+[[package]]
 name = "dotenv"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1772,6 +1780,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "stfu8"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bf70433e3300a3c395d06606a700cdf4205f4f14dbae2c6833127c6bb22db77"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2080,6 +2098,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
+name = "voca_rs"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f45932256489d36d51941228023b67c4e3c5cd15344a8bef49655e7fe0dd394"
+dependencies = [
+ "regex",
+ "stfu8",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "want"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2190,6 +2219,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "diesel",
+ "diesel_full_text_search",
  "dotenv",
  "env_logger",
  "futures",
@@ -2206,6 +2236,7 @@ dependencies = [
  "serde_qs",
  "validator",
  "validator_derive",
+ "voca_rs",
 ]
 
 [[package]]

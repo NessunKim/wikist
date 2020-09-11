@@ -1,4 +1,4 @@
-use crate::models::{Actor, Namespace, NewRevision, Redirection, Revision};
+use crate::models::{Actor, ArticleSearch, Namespace, NewRevision, Redirection, Revision};
 use crate::schema::articles;
 use anyhow::{anyhow, Result};
 use chrono::prelude::*;
@@ -51,6 +51,7 @@ impl Article {
                 .get_result::<Article>(conn)?;
             let revision = Revision::create(conn, &article, wikitext, comment, actor)?;
             article.set_latest_revision(conn, &revision)?;
+            ArticleSearch::create(conn, &article)?;
             Ok(article)
         })
     }
@@ -77,6 +78,12 @@ impl Article {
     pub fn get_full_title(&self, conn: &PgConnection) -> Result<String> {
         let namespace = self.get_namespace(conn)?;
         Ok(namespace.join(&self.title))
+    }
+
+    pub fn get_html(&self, conn: &PgConnection) -> Result<String> {
+        let wikitext = self.get_latest_revision(&conn)?.get_wikitext(&conn)?;
+        let parsed = crate::parser::parse(&wikitext);
+        Ok(crate::renderer::render(&parsed))
     }
 
     pub fn add_null_revision(
