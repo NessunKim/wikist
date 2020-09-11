@@ -203,18 +203,44 @@ pub async fn create_article(
     conn: DbConnection,
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::{Actor, Article, Namespace};
+    use crate::models::{Actor, Article, Namespace, Role, User};
+    let (namespace, _) = Namespace::parse_full_title(&conn, &data.full_title).map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
     let actor = match user_info {
         Some(user_info) => {
+            let user = User::find_by_id(&conn, user_info.id).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            let can_create = user.can_create(&conn, &namespace).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            if !can_create {
+                return Ok(HttpResponse::Forbidden().finish());
+            }
             Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?
         }
-        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?,
+        None => {
+            let can_create = Role::anonymous()
+                .can_create(&conn, &namespace)
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            if !can_create {
+                return Ok(HttpResponse::Forbidden().finish());
+            }
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        }
     };
     let article = Article::create(
         &conn,
