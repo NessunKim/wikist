@@ -25,4 +25,12 @@ impl ArticleSearch {
             .execute(conn)?;
         Ok(())
     }
+
+    pub fn update(conn: &PgConnection, article: &Article) -> Result<()> {
+        let search_vector = strip_tags(&article.get_html(conn)?);
+        diesel::update(article_searches::table.find(article.id))
+            .set(article_searches::vector.eq(to_tsvector(search_vector)))
+            .execute(conn)?;
+        Ok(())
+    }
 }

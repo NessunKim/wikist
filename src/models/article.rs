@@ -123,6 +123,7 @@ impl Article {
         conn.transaction(|| {
             let revision = Revision::create(conn, self, wikitext, comment, actor)?;
             self.set_latest_revision(conn, &revision)?;
+            ArticleSearch::update(conn, self)?;
             Ok(revision)
         })
     }
