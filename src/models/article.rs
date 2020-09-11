@@ -107,7 +107,6 @@ impl Article {
                 .values(new_revision)
                 .get_result(conn)?;
             self.set_latest_revision(conn, &revision)?;
-
             Ok(revision)
         })
     }
@@ -162,11 +161,13 @@ impl Article {
         conn.transaction(|| {
             self.is_active = false;
             self.save_changes::<Self>(conn)?;
-            self.add_null_revision(
+            let revision = self.add_null_revision(
                 conn,
                 &format!("(Delete: {}) {}", self.title, comment),
                 actor,
-            )
+            )?;
+            ArticleSearch::delete(conn, self)?;
+            Ok(revision)
         })
     }
 
@@ -233,7 +234,7 @@ impl Article {
                 &format!("(Fork: {} -> {}) {}", self.title, title, comment),
                 actor,
             )?;
-
+            ArticleSearch::create(conn, &article)?;
             Ok(article)
         })
     }
@@ -275,7 +276,7 @@ mod tests {
                 &conn,
                 &Namespace::default(),
                 "test",
-                "==test==",
+                "==test create article==",
                 "Comment!",
                 &actor,
             )
@@ -284,6 +285,9 @@ mod tests {
                 .filter(articles::title.eq("test"))
                 .first::<Article>(&conn)
                 .expect("must exist");
+
+            let articles = ArticleSearch::search(&conn, "create article").expect("must succeed");
+            assert_eq!(articles.len(), 1);
 
             Ok(())
         });

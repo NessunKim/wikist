@@ -174,9 +174,10 @@ impl User {
         use crate::schema::{roles, user_roles};
         let res = roles::table
             .inner_join(user_roles::table.inner_join(users::table))
+            .select(roles::all_columns)
             .filter(users::id.eq(self.id))
-            .load::<(Role, (UserRole, User))>(conn)?;
-        Ok(res.iter().map(|r| r.0.clone()).collect::<Vec<Role>>())
+            .load::<Role>(conn)?;
+        Ok(res)
     }
 
     pub fn has_any_role(&self, conn: &PgConnection, roles: &[Role]) -> Result<bool> {

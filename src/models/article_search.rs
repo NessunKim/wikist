@@ -1,8 +1,8 @@
 use crate::models::Article;
-use crate::schema::article_searches;
+use crate::schema::{article_searches, articles};
 use anyhow::Result;
 use diesel::prelude::*;
-use diesel_full_text_search::{to_tsvector, TsVector};
+use diesel_full_text_search::{plainto_tsquery, to_tsvector, TsVector, TsVectorExtensions};
 use voca_rs::strip::strip_tags;
 
 #[derive(Associations, Identifiable, Queryable)]
@@ -32,5 +32,19 @@ impl ArticleSearch {
             .set(article_searches::vector.eq(to_tsvector(search_vector)))
             .execute(conn)?;
         Ok(())
+    }
+
+    pub fn delete(conn: &PgConnection, article: &Article) -> Result<()> {
+        diesel::delete(article_searches::table.find(article.id)).execute(conn)?;
+        Ok(())
+    }
+
+    pub fn search(conn: &PgConnection, query: &str) -> Result<Vec<Article>> {
+        let res = article_searches::table
+            .inner_join(articles::table)
+            .select(articles::all_columns)
+            .filter(article_searches::vector.matches(plainto_tsquery(query)))
+            .load::<Article>(conn)?;
+        Ok(res)
     }
 }
