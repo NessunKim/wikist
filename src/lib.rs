@@ -5,10 +5,6 @@ extern crate diesel_full_text_search;
 extern crate validator_derive;
 extern crate validator;
 
-use actix_cors::Cors;
-use actix_web::{middleware::Logger, App, HttpServer};
-use actix_web_validator::JsonConfig;
-
 pub mod auth;
 pub mod db;
 pub mod extractors;
@@ -17,8 +13,11 @@ pub mod parser;
 pub mod renderer;
 pub mod routes;
 pub mod schema;
+
+use actix_cors::Cors;
 use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::{dev, http, Result};
+use actix_web::{dev, http, middleware::Logger, App, HttpServer, Result};
+use actix_web_validator::JsonConfig;
 
 fn render_500(res: dev::ServiceResponse) -> Result<ErrorHandlerResponse<dev::Body>> {
     if let Some(e) = res.response().error() {
@@ -42,7 +41,7 @@ pub async fn run() -> std::io::Result<()> {
             .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
             .wrap(Logger::default())
             .wrap(
-                Cors::new() // <- Construct CORS middleware builder
+                Cors::new()
                     //.allowed_origin("http://localhost:8000/")
                     .max_age(3600)
                     .finish(),
