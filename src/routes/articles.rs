@@ -445,7 +445,7 @@ pub async fn delete_article(
     user_info: Option<UserInfo>,
     conn: DbConnection,
     path: web::Path<(String,)>,
-    data: ValidatedJson<ArticleRenameRequest>,
+    data: ValidatedJson<ArticleDeleteRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Role, User};
     let full_title = path.0.clone();

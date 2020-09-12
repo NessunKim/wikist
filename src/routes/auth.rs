@@ -79,7 +79,7 @@ pub async fn auth_facebook(
     conn: DbConnection,
     fb_auth_request: web::Json<FbAuthRequest>,
 ) -> Result<HttpResponse, Error> {
-    use crate::models::{User, UserFindResult};
+    use crate::models::{Role, User, UserFindResult};
     use anyhow::Error;
     use reqwest::Url;
     let url = Url::parse(
@@ -129,6 +129,7 @@ pub async fn auth_facebook(
                     is_new_user = true;
                     let user = User::create(&conn, &email, &name)?;
                     user.add_authentication(&conn, "facebook", &fb_auth_request.user_id)?;
+                    user.add_role(&conn, &Role::logged_in())?;
                     user.issue_refresh_token()
                 }
             };
