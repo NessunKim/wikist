@@ -10,13 +10,13 @@ edition = "2018"
 log = "0.4"
 env_logger = "0.7.1"
 actix-web = "2.0"
-actix-rt = "1.0"
+actix-rt = "1"
 actix-cors = "0.2"
 jsonwebtoken = "7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4.15", features = ["serde"] }
-diesel = { version = "1.4.4", features = ["postgres", "r2d2", "chrono", "network-address"] }
+diesel = { version = "1.4", features = ["postgres", "r2d2", "chrono", "network-address"] }
 diesel_full_text_search = { git = "https://github.com/diesel-rs/diesel_full_text_search" }
 r2d2 = "0.8"
 dotenv = "0.15.0"
