@@ -1,7 +1,9 @@
 use super::Response;
 use crate::extractors::{ConnectionInfo, DbConnection, Query, UserInfo};
 use crate::parser;
-use actix_web::{delete, get, post, put, web, Error, HttpResponse};
+use actix_web::{
+    delete, error::ErrorInternalServerError, get, post, put, web, Error, HttpResponse,
+};
 use actix_web_validator::ValidatedJson;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
@@ -50,23 +52,21 @@ pub async fn get_article(
     use crate::models::Article;
     let ArticleGetQuery { fields } = &*query.unwrap_or_default();
     let full_title = path.0.clone();
-    let article = match Article::find_by_full_title(&conn, &full_title) {
-        Ok(Some(article)) => article,
-        Ok(None) => {
-            let full_title = path.0.clone();
-            return Ok(HttpResponse::NotFound()
-                .body(format!("No article found with full title: {}", &full_title)));
-        }
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
-    let revision = match article.get_latest_revision(&conn) {
-        Ok(revision) => revision,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
-    let wikitext = match revision.get_wikitext(&conn) {
-        Ok(wikitext) => wikitext,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let article =
+        match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
+            Some(article) => article,
+            None => {
+                let full_title = path.0.clone();
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("No article found with full title: {}", &full_title)));
+            }
+        };
+    let revision = article
+        .get_latest_revision(&conn)
+        .map_err(ErrorInternalServerError)?;
+    let wikitext = revision
+        .get_wikitext(&conn)
+        .map_err(ErrorInternalServerError)?;
     let html = if fields.contains(&ArticleGetQueryFields::Html) {
         let wikitext = wikitext.clone();
         let html = web::block(move || -> Result<String> {
@@ -85,7 +85,7 @@ pub async fn get_article(
         data: ArticleGetResponse {
             full_title: article
                 .get_full_title(&conn)
-                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
+                .map_err(ErrorInternalServerError)?,
             html,
             wikitext: if fields.contains(&ArticleGetQueryFields::Wikitext) {
                 Some(wikitext)
@@ -124,19 +124,18 @@ pub async fn get_revisions(
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article};
     let full_title = path.0.clone();
-    let article = match Article::find_by_full_title(&conn, &full_title) {
-        Ok(Some(article)) => article,
-        Ok(None) => {
-            let full_title = path.0.clone();
-            return Ok(HttpResponse::NotFound()
-                .body(format!("No article found with full title: {}", &full_title)));
-        }
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
-    let revisions = match article.get_all_revisions(&conn) {
-        Ok(revisions) => revisions,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let article =
+        match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
+            Some(article) => article,
+            None => {
+                let full_title = path.0.clone();
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("No article found with full title: {}", &full_title)));
+            }
+        };
+    let revisions = article
+        .get_all_revisions(&conn)
+        .map_err(ErrorInternalServerError)?;
     let data: Vec<ArticleRevisionEntity> = revisions
         .iter()
         .map(|rev| {
@@ -167,10 +166,7 @@ pub async fn get_revisions(
             }
         })
         .collect::<Result<Vec<ArticleRevisionEntity>, _>>()
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
+        .map_err(ErrorInternalServerError)?;
     let resp = Response {
         status: "OK".to_owned(),
         data,
@@ -204,42 +200,28 @@ pub async fn create_article(
     data: ValidatedJson<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Namespace, Role, User};
-    let (namespace, _) = Namespace::parse_full_title(&conn, &data.full_title).map_err(|e| {
-        eprintln!("{}", e);
-        HttpResponse::InternalServerError().finish()
-    })?;
+    let (namespace, _) =
+        Namespace::parse_full_title(&conn, &data.full_title).map_err(ErrorInternalServerError)?;
     let actor = match user_info {
         Some(user_info) => {
-            let user = User::find_by_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
-            let can_create = user.can_create(&conn, &namespace).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
+            let user = User::find_by_id(&conn, user_info.id).map_err(ErrorInternalServerError)?;
+            let can_create = user
+                .can_create(&conn, &namespace)
+                .map_err(ErrorInternalServerError)?;
             if !can_create {
                 return Ok(HttpResponse::Forbidden().finish());
             }
-            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+            Actor::find_or_create_from_user_id(&conn, user_info.id)
+                .map_err(ErrorInternalServerError)?
         }
         None => {
             let can_create = Role::anonymous()
                 .can_create(&conn, &namespace)
-                .map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
+                .map_err(ErrorInternalServerError)?;
             if !can_create {
                 return Ok(HttpResponse::Forbidden().finish());
             }
-            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(ErrorInternalServerError)?
         }
     };
     let article = Article::create(
@@ -250,16 +232,13 @@ pub async fn create_article(
         &data.comment,
         &actor,
     )
-    .map_err(|e| {
-        eprintln!("{}", e);
-        HttpResponse::InternalServerError().finish()
-    })?;
+    .map_err(ErrorInternalServerError)?;
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleCreateResponse {
             full_title: article
                 .get_full_title(&conn)
-                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
+                .map_err(ErrorInternalServerError)?,
             revision_id: article.latest_revision_id,
         },
     };
@@ -288,53 +267,42 @@ pub async fn edit_article(
     use crate::models::{Actor, Article, Role, User};
 
     let full_title = path.0.clone();
-    let mut article = match Article::find_by_full_title(&conn, &full_title) {
-        Ok(Some(article)) => article,
-        Ok(None) => {
-            let full_title = path.0.clone();
-            return Ok(HttpResponse::NotFound()
-                .body(format!("No article found with full title: {}", &full_title)));
-        }
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let mut article =
+        match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
+            Some(article) => article,
+            None => {
+                let full_title = path.0.clone();
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("No article found with full title: {}", &full_title)));
+            }
+        };
 
     let actor = match user_info {
         Some(user_info) => {
-            let user = User::find_by_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
-            let can_edit = user.can_edit(&conn, &article).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
+            let user = User::find_by_id(&conn, user_info.id).map_err(ErrorInternalServerError)?;
+            let can_edit = user
+                .can_edit(&conn, &article)
+                .map_err(ErrorInternalServerError)?;
             if !can_edit {
                 return Ok(HttpResponse::Forbidden().finish());
             }
-            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+            Actor::find_or_create_from_user_id(&conn, user_info.id)
+                .map_err(ErrorInternalServerError)?
         }
         None => {
-            let can_edit = Role::anonymous().can_edit(&conn, &article).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
+            let can_edit = Role::anonymous()
+                .can_edit(&conn, &article)
+                .map_err(ErrorInternalServerError)?;
             if !can_edit {
                 return Ok(HttpResponse::Forbidden().finish());
             }
-            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(ErrorInternalServerError)?
         }
     };
 
-    let revision = match article.edit(&conn, &data.wikitext, &data.comment, &actor) {
-        Ok(revision) => revision,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let revision = article
+        .edit(&conn, &data.wikitext, &data.comment, &actor)
+        .map_err(ErrorInternalServerError)?;
 
     let resp = Response {
         status: "OK".to_owned(),
@@ -368,36 +336,30 @@ pub async fn rename_article(
     use crate::models::{Actor, Article};
     let full_title = path.0.clone();
     let actor = match user_info {
-        Some(user_info) => {
-            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+        Some(user_info) => Actor::find_or_create_from_user_id(&conn, user_info.id)
+            .map_err(ErrorInternalServerError)?,
+        None => {
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(ErrorInternalServerError)?
         }
-        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?,
     };
-    let mut article = match Article::find_by_full_title(&conn, &full_title) {
-        Ok(Some(article)) => article,
-        Ok(None) => {
-            let full_title = path.0.clone();
-            return Ok(HttpResponse::NotFound()
-                .body(format!("No article found with full title: {}", &full_title)));
-        }
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
-    let revision = match article.rename(&conn, &data.full_title, &data.comment, &actor) {
-        Ok(revision) => revision,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let mut article =
+        match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
+            Some(article) => article,
+            None => {
+                let full_title = path.0.clone();
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("No article found with full title: {}", &full_title)));
+            }
+        };
+    let revision = article
+        .rename(&conn, &data.full_title, &data.comment, &actor)
+        .map_err(ErrorInternalServerError)?;
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleRenameResponse {
             full_title: article
                 .get_full_title(&conn)
-                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
+                .map_err(ErrorInternalServerError)?,
             revision_id: revision.id,
         },
     };
@@ -424,36 +386,30 @@ pub async fn delete_article(
     use crate::models::{Actor, Article};
     let full_title = path.0.clone();
     let actor = match user_info {
-        Some(user_info) => {
-            Actor::find_or_create_from_user_id(&conn, user_info.id).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
+        Some(user_info) => Actor::find_or_create_from_user_id(&conn, user_info.id)
+            .map_err(ErrorInternalServerError)?,
+        None => {
+            Actor::find_or_create_from_ip(&conn, &ip_address).map_err(ErrorInternalServerError)?
         }
-        None => Actor::find_or_create_from_ip(&conn, &ip_address).map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?,
     };
-    let mut article = match Article::find_by_full_title(&conn, &full_title) {
-        Ok(Some(article)) => article,
-        Ok(None) => {
-            let full_title = path.0.clone();
-            return Ok(HttpResponse::NotFound()
-                .body(format!("No article found with full title: {}", &full_title)));
-        }
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
-    let revision = match article.delete(&conn, &data.comment, &actor) {
-        Ok(revision) => revision,
-        Err(_) => return Ok(HttpResponse::InternalServerError().finish()),
-    };
+    let mut article =
+        match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
+            Some(article) => article,
+            None => {
+                let full_title = path.0.clone();
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("No article found with full title: {}", &full_title)));
+            }
+        };
+    let revision = article
+        .delete(&conn, &data.comment, &actor)
+        .map_err(ErrorInternalServerError)?;
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleDeleteResponse {
             full_title: article
                 .get_full_title(&conn)
-                .map_err(|_e| HttpResponse::InternalServerError().finish())?,
+                .map_err(ErrorInternalServerError)?,
             revision_id: revision.id,
         },
     };

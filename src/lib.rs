@@ -17,6 +17,19 @@ pub mod parser;
 pub mod renderer;
 pub mod routes;
 pub mod schema;
+use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::{dev, http, Result};
+
+fn render_500(res: dev::ServiceResponse) -> Result<ErrorHandlerResponse<dev::Body>> {
+    if let Some(e) = res.response().error() {
+        eprintln!("{}", e);
+    }
+    Ok(ErrorHandlerResponse::Response(res.map_body(
+        |_head, _body| {
+            dev::ResponseBody::Body(dev::Body::Message(Box::new("Internal Server Error")))
+        },
+    )))
+}
 
 pub async fn run() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "my_errors=debug,actix_web=debug");
@@ -26,6 +39,7 @@ pub async fn run() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(JsonConfig::default().limit(1024 * 1024 * 50))
+            .wrap(ErrorHandlers::new().handler(http::StatusCode::INTERNAL_SERVER_ERROR, render_500))
             .wrap(Logger::default())
             .wrap(
                 Cors::new() // <- Construct CORS middleware builder
