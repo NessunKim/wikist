@@ -108,37 +108,40 @@ fn render_cell(cell: &TableCell, state: &mut super::State) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render_table() {
-        use super::super::*;
-
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
         let wikitext = "{|\n|A\n|B\n|}";
         let result = Configuration::default().parse(wikitext);
         assert_eq!(
-            render(&result),
+            render(&conn, &result),
             "<table>\n<tbody><tr>\n<td>A\n</td>\n<td>B\n</td></tr></tbody></table>\n",
         );
 
         let wikitext = "{|\n!A\n!B\n|-\n|C\n|D\n|}";
         let result = Configuration::default().parse(wikitext);
         assert_eq!(
-            render(&result),
+            render(&conn, &result),
             "<table>\n<tbody><tr>\n<th>A\n</th>\n<th>B\n</th></tr>\n<tr>\n<td>C\n</td>\n<td>D\n</td></tr></tbody></table>\n",
         );
 
         let wikitext = "{|\n| A\nasdf\n|}";
         let result = Configuration::default().parse(wikitext);
         assert_eq!(
-            render(&result),
+            render(&conn, &result),
             "<table>\n<tbody><tr>\n<td>A\n<p>asdf\n</p>\n</td></tr></tbody></table>\n",
         );
 
         let wikitext = "{| class=\"t\"\n|- class=\"r\"\n| class=\"c\" | content\n|}";
         let result = Configuration::default().parse(wikitext);
         assert_eq!(
-            render(&result),
+            render(&conn, &result),
             "<table class=\"t\">\n<tbody><tr class=\"r\">\n<td class=\"c\">content\n</td></tr></tbody></table>\n",
         );
 
@@ -146,7 +149,7 @@ mod tests {
         let wikitext = "{| onclick=\"alert('xss')\"\n| a\n|}";
         let result = Configuration::default().parse(wikitext);
         assert_ne!(
-            render(&result),
+            render(&conn, &result),
             "<table onclick=\"alert('xss')\">\n<tbody><tr>\n<td>a\n</td></tr></tbody></table>\n",
         );
 
@@ -158,7 +161,7 @@ mod tests {
 |}";
         let result = Configuration::default().parse(wikitext);
         assert_eq!(
-            render(&result),
+            render(&conn, &result),
             "<table>
 <caption>c1
 </caption>
@@ -169,5 +172,7 @@ mod tests {
 </td></tr></tbody></table>
 ",
         );
+        Ok(())
+    })
     }
 }

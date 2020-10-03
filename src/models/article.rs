@@ -83,7 +83,7 @@ impl Article {
     pub fn get_html(&self, conn: &PgConnection) -> Result<String> {
         let wikitext = self.get_latest_revision(&conn)?.get_wikitext(&conn)?;
         let parsed = crate::parser::parse(&wikitext);
-        Ok(crate::renderer::render(&parsed))
+        Ok(crate::renderer::render(conn, &parsed))
     }
 
     pub fn add_null_revision(

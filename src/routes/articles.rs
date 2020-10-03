@@ -87,11 +87,14 @@ pub async fn get_article(
     let wikitext = revision
         .get_wikitext(&conn)
         .map_err(ErrorInternalServerError)?;
+    let full_title = article
+        .get_full_title(&conn)
+        .map_err(ErrorInternalServerError)?;
     let html = if fields.contains(&ArticleGetQueryFields::Html) {
         let wikitext = wikitext.clone();
         let html = web::block(move || -> Result<String> {
             let parsed = parser::parse(&wikitext);
-            let html = crate::renderer::render(&parsed);
+            let html = crate::renderer::render(&conn, &parsed);
             Ok(html)
         })
         .await
@@ -103,9 +106,7 @@ pub async fn get_article(
     let resp = Response {
         status: "OK".to_owned(),
         data: ArticleGetResponse {
-            full_title: article
-                .get_full_title(&conn)
-                .map_err(ErrorInternalServerError)?,
+            full_title,
             html,
             wikitext: if fields.contains(&ArticleGetQueryFields::Wikitext) {
                 Some(wikitext)

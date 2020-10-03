@@ -12,20 +12,25 @@ pub fn open_paragraph() -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render_paragraph_break() {
-        use super::super::*;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = "asdf\n\naaa";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p>asdf</p><p>aaa</p>");
 
-        let wikitext = "asdf\n\naaa";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p>asdf</p><p>aaa</p>");
-
-        let wikitext = "a'''b\n\nc";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p>a<b>b</b></p><p>c</p>");
+            let wikitext = "a'''b\n\nc";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p>a<b>b</b></p><p>c</p>");
+            Ok(())
+        })
     }
 }

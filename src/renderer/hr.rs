@@ -8,19 +8,25 @@ pub fn render_hr(state: &mut super::State) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render_hr() {
-        use super::super::*;
-        let wikitext = "----";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<hr>\n");
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = "----";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<hr>\n");
 
-        let wikitext = "aa\n----\n";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p>aa\n</p><hr>\n");
+            let wikitext = "aa\n----\n";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p>aa\n</p><hr>\n");
+            Ok(())
+        })
     }
 }

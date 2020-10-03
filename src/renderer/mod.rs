@@ -1,4 +1,4 @@
-use crate::models::Article;
+use diesel::prelude::PgConnection;
 use htmlescape::encode_minimal;
 use parse_wiki_text::{Node, Output};
 use std::collections::VecDeque;
@@ -11,28 +11,28 @@ mod list;
 mod paragraph;
 mod preformatted;
 mod table;
+mod template;
 
 pub struct CategoryLink {
     target: String,
     ordinal: String,
 }
 
-pub struct State {
+pub struct State<'a> {
+    conn: &'a PgConnection,
     read_base_url: String,
     edit_base_url: String,
-    get_article: fn(full_title: &str) -> Option<Article>,
-
     bold_italic_queue: VecDeque<(BIStatus, i32)>,
     external_link_auto_number: i32,
     internal_links: Vec<String>,
     categories: Vec<CategoryLink>,
 }
 
-pub fn render(ast: &Output) -> String {
+pub fn render(conn: &PgConnection, ast: &Output) -> String {
     let mut state = State {
+        conn,
         read_base_url: "/wiki/".to_owned(),
         edit_base_url: "/edit/".to_owned(),
-        get_article: |_t| None,
         bold_italic_queue: VecDeque::new(),
         external_link_auto_number: 0,
         internal_links: vec![],
@@ -195,7 +195,7 @@ fn render_nodes(nodes: &[Node], state: &mut State) -> String {
 }
 
 fn render_text(value: &str) -> String {
-    value.to_string()
+    value.to_owned()
 }
 
 fn render_entity(ch: &char) -> String {
@@ -227,24 +227,32 @@ fn render_node(node: &Node, state: &mut State) -> String {
             rows,
             ..
         } => table::render_table(attributes, captions, rows, state),
-        Node::Comment { .. } | _ => "".to_string(),
+        Node::Template {
+            name, parameters, ..
+        } => template::render_template(name, parameters, state),
+        Node::Comment { .. } | _ => "".to_owned(),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render() {
-        use super::*;
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = "text";
+            let result = Configuration::default().parse(wikitext);
+            assert_eq!(render(&conn, &result), "<p>text</p>");
 
-        let wikitext = "text";
-        let result = Configuration::default().parse(wikitext);
-        assert_eq!(render(&result), "<p>text</p>");
-
-        let wikitext = "&lt;h3&lt;";
-        let result = Configuration::default().parse(wikitext);
-        assert_eq!(render(&result), "<p>&lt;h3&lt;</p>");
+            let wikitext = "&lt;h3&lt;";
+            let result = Configuration::default().parse(wikitext);
+            assert_eq!(render(&conn, &result), "<p>&lt;h3&lt;</p>");
+            Ok(())
+        })
     }
 }

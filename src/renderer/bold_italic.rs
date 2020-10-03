@@ -29,24 +29,30 @@ pub fn clear_queue(state: &mut super::State) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render_bold_italic() {
-        use super::super::*;
-        let wikitext = "'''''aaa'''''";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p><i><b>aaa</b></i></p>");
-        let wikitext = "'''''asdf''bb'''";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p><i><b>asdf</b></i><b>bb</b></p>");
-        // below is the right way to render, but it's difficult
-        // assert_eq!(render(&result), "<p><b><i>asdf</i>bb</b></p>");
-        let wikitext = "'''''asdf'''bb''";
-        let result = Configuration::default().parse(wikitext);
-        assert!(result.warnings.is_empty());
-        assert_eq!(render(&result), "<p><i><b>asdf</b>bb</i></p>");
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = "'''''aaa'''''";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p><i><b>aaa</b></i></p>");
+            let wikitext = "'''''asdf''bb'''";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p><i><b>asdf</b></i><b>bb</b></p>");
+            // below is the right way to render, but it's difficult
+            // assert_eq!(render(&result), "<p><b><i>asdf</i>bb</b></p>");
+            let wikitext = "'''''asdf'''bb''";
+            let result = Configuration::default().parse(wikitext);
+            assert!(result.warnings.is_empty());
+            assert_eq!(render(&conn, &result), "<p><i><b>asdf</b>bb</i></p>");
+            Ok(())
+        })
     }
 }

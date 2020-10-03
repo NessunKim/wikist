@@ -56,30 +56,41 @@ pub fn render_definition_list(items: &[DefinitionListItem], state: &mut super::S
 
 #[cfg(test)]
 mod tests {
+    use super::super::*;
+    use crate::db::create_connection;
+    use diesel::prelude::*;
     use parse_wiki_text::Configuration;
 
     #[test]
     fn test_render_list() {
-        use super::super::*;
-
-        let wikitext = "*a\n*b\n#c\n*d\n";
-        let result = Configuration::default().parse(wikitext);
-        assert_eq!(
-            render(&result),
-            concat!(
-                "<ul><li>a</li>\n",
-                "<li>b</li></ul>\n",
-                "<ol><li>c</li></ol>\n",
-                "<ul><li>d</li></ul>\n"
-            )
-        );
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = "*a\n*b\n#c\n*d\n";
+            let result = Configuration::default().parse(wikitext);
+            assert_eq!(
+                render(&conn, &result),
+                concat!(
+                    "<ul><li>a</li>\n",
+                    "<li>b</li></ul>\n",
+                    "<ol><li>c</li></ol>\n",
+                    "<ul><li>d</li></ul>\n"
+                )
+            );
+            Ok(())
+        })
     }
+
     #[test]
     fn test_render_definition_list() {
-        use super::super::*;
-
-        let wikitext = ";asdf\n:aa";
-        let result = Configuration::default().parse(wikitext);
-        assert_eq!(render(&result), "<dl><dt>asdf</dt>\n<dd>aa</dd></dl>\n");
+        let conn = create_connection();
+        conn.test_transaction::<_, diesel::result::Error, _>(|| {
+            let wikitext = ";asdf\n:aa";
+            let result = Configuration::default().parse(wikitext);
+            assert_eq!(
+                render(&conn, &result),
+                "<dl><dt>asdf</dt>\n<dd>aa</dd></dl>\n"
+            );
+            Ok(())
+        })
     }
 }
