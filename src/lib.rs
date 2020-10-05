@@ -1,7 +1,5 @@
 #[macro_use]
 extern crate diesel;
-#[macro_use]
-extern crate validator_derive;
 
 pub mod auth;
 pub mod db;

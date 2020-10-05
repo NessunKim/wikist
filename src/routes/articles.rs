@@ -4,7 +4,7 @@ use crate::parser;
 use actix_web::{
     delete, error::ErrorInternalServerError, get, post, put, web, Error, HttpResponse,
 };
-use actix_web_validator::ValidatedJson;
+use actix_web_validator::Json;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -45,19 +45,18 @@ pub struct ArticleGetResponse {
 
 #[get("/articles/{full_title}")]
 pub async fn get_article(
-    path: web::Path<(String,)>,
+    web::Path((full_title,)): web::Path<(String,)>,
     user_info: Option<UserInfo>,
     query: Option<Query<ArticleGetQuery>>,
     conn: DbConnection,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Article, Role, User};
     let ArticleGetQuery { fields } = &*query.unwrap_or_default();
-    let full_title = path.0.clone();
+    // let full_title = path.0.clone();
     let article =
         match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
             Some(article) => article,
             None => {
-                let full_title = path.0.clone();
                 return Ok(HttpResponse::NotFound()
                     .body(format!("No article found with full title: {}", &full_title)));
             }
@@ -140,17 +139,15 @@ pub type ArticleRevisionsGetResponse = Vec<ArticleRevisionEntity>;
 
 #[get("/articles/{full_title}/revisions")]
 pub async fn get_revisions(
-    path: web::Path<(String,)>,
+    web::Path((full_title,)): web::Path<(String,)>,
     user_info: Option<UserInfo>,
     conn: DbConnection,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Role, User};
-    let full_title = path.0.clone();
     let article =
         match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
             Some(article) => article,
             None => {
-                let full_title = path.0.clone();
                 return Ok(HttpResponse::NotFound()
                     .body(format!("No article found with full title: {}", &full_title)));
             }
@@ -238,7 +235,7 @@ pub async fn create_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
     conn: DbConnection,
-    data: ValidatedJson<ArticleCreateRequest>,
+    data: Json<ArticleCreateRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Namespace, Role, User};
     let (namespace, _) =
@@ -302,17 +299,15 @@ pub async fn edit_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
     conn: DbConnection,
-    path: web::Path<(String,)>,
-    data: ValidatedJson<ArticleEditRequest>,
+    web::Path((full_title,)): web::Path<(String,)>,
+    data: Json<ArticleEditRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Role, User};
 
-    let full_title = path.0.clone();
     let mut article =
         match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
             Some(article) => article,
             None => {
-                let full_title = path.0.clone();
                 return Ok(HttpResponse::NotFound()
                     .body(format!("No article found with full title: {}", &full_title)));
             }
@@ -371,16 +366,14 @@ pub async fn rename_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
     conn: DbConnection,
-    path: web::Path<(String,)>,
-    data: ValidatedJson<ArticleRenameRequest>,
+    web::Path((full_title,)): web::Path<(String,)>,
+    data: Json<ArticleRenameRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Namespace, Role, User};
-    let full_title = path.0.clone();
     let mut article =
         match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
             Some(article) => article,
             None => {
-                let full_title = path.0.clone();
                 return Ok(HttpResponse::NotFound()
                     .body(format!("No article found with full title: {}", &full_title)));
             }
@@ -445,16 +438,14 @@ pub async fn delete_article(
     ConnectionInfo { ip_address }: ConnectionInfo,
     user_info: Option<UserInfo>,
     conn: DbConnection,
-    path: web::Path<(String,)>,
-    data: ValidatedJson<ArticleDeleteRequest>,
+    web::Path((full_title,)): web::Path<(String,)>,
+    data: Json<ArticleDeleteRequest>,
 ) -> Result<HttpResponse, Error> {
     use crate::models::{Actor, Article, Role, User};
-    let full_title = path.0.clone();
     let mut article =
         match Article::find_by_full_title(&conn, &full_title).map_err(ErrorInternalServerError)? {
             Some(article) => article,
             None => {
-                let full_title = path.0.clone();
                 return Ok(HttpResponse::NotFound()
                     .body(format!("No article found with full title: {}", &full_title)));
             }

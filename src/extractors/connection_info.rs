@@ -14,7 +14,7 @@ impl FromRequest for ConnectionInfo {
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {
         let conn_info = req.connection_info();
-        let remote = conn_info.remote().unwrap();
+        let remote = conn_info.realip_remote_addr().unwrap();
         let ip_address = IpNetwork::from_str(remote.split(':').collect::<Vec<&str>>()[0]).unwrap();
         ok(ConnectionInfo { ip_address })
     }
